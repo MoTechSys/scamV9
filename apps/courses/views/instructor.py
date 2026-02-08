@@ -36,10 +36,11 @@ logger = logging.getLogger('courses')
 
 class InstructorDashboardView(LoginRequiredMixin, InstructorRequiredMixin, TemplateView):
     """لوحة تحكم المدرس"""
-    template_name = 'instructor_panel/dashboard.html'
+    template_name = 'instructor_panel/dashboard_new.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['active_page'] = 'dashboard'
         instructor = self.request.user
         
         # المقررات المعينة - مع prefetch للملفات
@@ -57,6 +58,7 @@ class InstructorDashboardView(LoginRequiredMixin, InstructorRequiredMixin, Templ
         files_list = list(instructor_files)
         context['total_files'] = len(files_list)
         context['total_downloads'] = sum(f.download_count for f in files_list)
+        context['total_views'] = sum(f.view_count for f in files_list)
         
         # آخر الملفات والأكثر تفاعلاً (من نفس القائمة)
         context['recent_uploads'] = sorted(files_list, key=lambda x: x.upload_date, reverse=True)[:5]
