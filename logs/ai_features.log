@@ -82,3 +82,12 @@
 [2026-02-09 00:05:25] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
 [2026-02-09 00:05:27] INFO [ai_features:744] GeminiService: Reinitialized with next API key
 [2026-02-09 00:05:57] ERROR [ai_features:1059] Document Q&A failed: ⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.
+[2026-02-09 02:29:30] WARNING [ai_features:721] GeminiService: No API keys available. Service will be limited.
+[2026-02-09 02:29:30] INFO [ai_features:848] Extracted 3251 characters from mm.txt
+[2026-02-09 02:29:30] ERROR [ai_features:1059] Document Q&A failed: Gemini client not initialized
+[2026-02-09 02:29:35] WARNING [ai_features:721] GeminiService: No API keys available. Service will be limited.
+[2026-02-09 02:29:35] INFO [ai_features:848] Extracted 3251 characters from mm.txt
+[2026-02-09 02:29:35] ERROR [ai_features:1059] Document Q&A failed: Gemini client not initialized
+[2026-02-09 02:29:39] WARNING [ai_features:721] GeminiService: No API keys available. Service will be limited.
+[2026-02-09 02:29:39] INFO [ai_features:848] Extracted 3251 characters from mm.txt
+[2026-02-09 02:29:39] ERROR [ai_features:1059] Document Q&A failed: Gemini client not initialized
