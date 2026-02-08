@@ -1,16 +1,16 @@
 """
-خدمات الذكاء الاصطناعي - Google Gemini (Enterprise Edition)
+خدمات الذكاء الاصطناعي - Google Gemini (Enterprise Edition v2)
 S-ACM - Smart Academic Content Management System
 
-== الميزات الجديدة ==
-1. Round-Robin Key Manager: يدعم حتى 10 مفاتيح API مع التدوير التلقائي
-2. Smart Chunking: تقسيم ذكي للنصوص الكبيرة مع الحفاظ على السياق
-3. File-Based Storage: حفظ مخرجات AI كملفات .md بدلاً من DB
-4. User Notes: جميع الطرق تقبل ملاحظات المستخدم للسياق الإضافي
-5. Question Matrix: دعم توليد أسئلة متعددة الأنواع مع الدرجات
+=== Phase 2: TANK AI Engine (Dynamic Governance) ===
+1. HydraKeyManager: DB-based Round-Robin with cooldown, RPM enforcement
+2. SmartChunker: Uses AIConfiguration.chunk_size from DB
+3. GeminiService: Uses AIConfiguration for model/tokens/temperature
+4. All settings are Admin-editable, ZERO .env dependency for AI config
 
-المؤلف: S-ACM Enterprise
-التاريخ: 2026-02-08
+== Legacy Compatibility ==
+- All public interfaces preserved (GeminiService, QuestionMatrixConfig, etc.)
+- Falls back to .env keys if no DB keys configured
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ import json
 import hashlib
 import logging
 import os
+import re
 import time
 import threading
 from abc import ABC, abstractmethod
@@ -37,14 +38,21 @@ from django.utils import timezone
 logger = logging.getLogger('ai_features')
 
 
-# ========== Constants ==========
-GEMINI_MODEL = "gemini-2.0-flash"
-MAX_INPUT_LENGTH = 30000
-CHUNK_SIZE = 8000
-CHUNK_OVERLAP = 500
+# ========== Constants (Fallbacks - DB config takes priority) ==========
+FALLBACK_MODEL = "gemini-2.0-flash"
+FALLBACK_CHUNK_SIZE = 30000
+FALLBACK_CHUNK_OVERLAP = 500
+FALLBACK_MAX_OUTPUT_TOKENS = 2000
+FALLBACK_TEMPERATURE = 0.3
 CACHE_TIMEOUT = 3600
 MAX_RETRIES = 3
 AI_OUTPUT_DIR = 'ai_generated'
+
+# Legacy compatibility aliases
+GEMINI_MODEL = FALLBACK_MODEL
+MAX_INPUT_LENGTH = FALLBACK_CHUNK_SIZE
+CHUNK_SIZE = 8000
+CHUNK_OVERLAP = 500
 
 
 # ========== Custom Exceptions ==========
@@ -68,6 +76,11 @@ class GeminiAPIError(GeminiError):
 
 class GeminiRateLimitError(GeminiAPIError):
     """Raised when rate limit is exceeded."""
+    pass
+
+
+class GeminiServiceDisabledError(GeminiError):
+    """Raised when AI service is disabled by admin."""
     pass
 
 
@@ -121,7 +134,7 @@ class Question:
 
 @dataclass
 class QuestionMatrixConfig:
-    """تكوين مصفوفة الأسئلة - لتحديد أنواع وأعداد ودرجات الأسئلة."""
+    """تكوين مصفوفة الأسئلة."""
     mcq_count: int = 0
     mcq_score: float = 2.0
     true_false_count: int = 0
@@ -160,13 +173,29 @@ class AIResponse:
     md_file_path: Optional[str] = None
 
 
-# ========== Round-Robin Key Manager ==========
+# ========================================================================
+# Phase 2: HYDRA KEY MANAGER (DB-based)
+# ========================================================================
 
-class APIKeyManager:
+class HydraKeyManager:
     """
-    مدير مفاتيح API مع Round-Robin.
-    يقرأ حتى 10 مفاتيح من .env ويتنقل بينها تلقائياً.
-    Thread-safe باستخدام Lock.
+    The "Hydra" Key Manager - DB-Powered Round-Robin with Cooldown.
+
+    Features:
+    - Fetches active keys from DB (APIKey model)
+    - Round-Robin rotation across available keys
+    - Automatic cooldown on 429 (Rate Limit) errors
+    - RPM (Requests Per Minute) enforcement per key
+    - Falls back to .env keys if no DB keys exist
+    - Thread-safe singleton
+
+    Usage:
+        manager = HydraKeyManager()
+        key_obj, raw_key = manager.get_next_key()
+        # ... use raw_key for API call ...
+        key_obj.mark_success(latency_ms=150)
+        # or on error:
+        key_obj.mark_error("429 Too Many Requests", is_rate_limit=True)
     """
     _instance = None
     _lock = threading.Lock()
@@ -182,72 +211,148 @@ class APIKeyManager:
     def __init__(self):
         if self._initialized:
             return
-        self._keys: List[str] = []
         self._current_index = 0
         self._key_lock = threading.Lock()
-        self._load_keys()
+        self._fallback_keys: List[str] = []
+        self._fallback_index = 0
+        self._load_fallback_keys()
         self._initialized = True
 
-    def _load_keys(self):
-        """تحميل المفاتيح من الإعدادات والبيئة."""
+    def _load_fallback_keys(self):
+        """Load fallback keys from .env (legacy support)."""
         keys = []
-
-        # المفتاح الرئيسي
         primary_key = getattr(settings, 'GEMINI_API_KEY', '') or os.getenv('GEMINI_API_KEY', '')
         if primary_key and primary_key != 'your_gemini_api_key_here':
             keys.append(primary_key)
-
-        # مفاتيح إضافية من 1 إلى 10
         for i in range(1, 11):
             key = os.getenv(f'GEMINI_API_KEY_{i}', '')
             if key and key not in keys:
                 keys.append(key)
-
-        self._keys = keys
+        self._fallback_keys = keys
         if keys:
-            logger.info(f"APIKeyManager: Loaded {len(keys)} API key(s)")
-        else:
-            logger.warning("APIKeyManager: No API keys found!")
+            logger.info(f"HydraKeyManager: Loaded {len(keys)} fallback .env key(s)")
 
-    def get_key(self) -> str:
-        """الحصول على المفتاح التالي بنظام Round-Robin."""
-        if not self._keys:
-            raise GeminiConfigurationError(
-                "No GEMINI_API_KEY found. Set GEMINI_API_KEY in .env "
-                "or GEMINI_API_KEY_1 through GEMINI_API_KEY_10."
+    def _get_db_keys(self):
+        """Fetch active & available keys from DB."""
+        try:
+            from apps.ai_features.models import APIKey
+            now = timezone.now()
+            return list(
+                APIKey.objects.filter(
+                    provider='gemini',
+                    is_active=True,
+                ).exclude(
+                    status__in=['disabled', 'error']
+                ).order_by('priority', 'pk')
             )
-        with self._key_lock:
-            key = self._keys[self._current_index % len(self._keys)]
-            self._current_index += 1
-            return key
+        except Exception as e:
+            logger.warning(f"HydraKeyManager: Cannot fetch DB keys: {e}")
+            return []
 
-    def rotate_key(self):
-        """تدوير يدوي للمفتاح (يُستدعى عند Rate Limit)."""
+    def get_next_key(self):
+        """
+        Get the next available API key using Round-Robin.
+
+        Returns:
+            tuple: (APIKey_instance_or_None, raw_key_string)
+            If using DB key: (APIKey, decrypted_key)
+            If using fallback: (None, env_key)
+
+        Raises:
+            GeminiConfigurationError: If no keys are available.
+        """
+        with self._key_lock:
+            # Try DB keys first
+            db_keys = self._get_db_keys()
+            available_keys = [k for k in db_keys if k.is_available() and k.check_rpm_limit()]
+
+            if available_keys:
+                key_obj = available_keys[self._current_index % len(available_keys)]
+                self._current_index += 1
+                raw_key = key_obj.get_key()
+                if raw_key:
+                    return key_obj, raw_key
+                logger.warning(f"HydraKeyManager: Key {key_obj.label} decryption failed")
+
+            # Fallback to .env keys
+            if self._fallback_keys:
+                key = self._fallback_keys[self._fallback_index % len(self._fallback_keys)]
+                self._fallback_index += 1
+                logger.info("HydraKeyManager: Using fallback .env key")
+                return None, key
+
+            raise GeminiConfigurationError(
+                "لا توجد مفاتيح API متاحة. أضف مفاتيح من لوحة الإدارة أو في ملف .env"
+            )
+
+    def rotate_after_error(self, failed_key_obj=None, error_msg: str = '', is_rate_limit: bool = False):
+        """Rotate to next key after an error."""
+        if failed_key_obj:
+            failed_key_obj.mark_error(error_msg, is_rate_limit=is_rate_limit)
         with self._key_lock:
             self._current_index += 1
-            logger.info(f"APIKeyManager: Rotated to key index {self._current_index % len(self._keys)}")
+            if not failed_key_obj and self._fallback_keys:
+                self._fallback_index += 1
 
     @property
     def total_keys(self) -> int:
-        return len(self._keys)
+        db_count = len(self._get_db_keys())
+        return db_count + len(self._fallback_keys)
 
     @property
     def has_keys(self) -> bool:
-        return len(self._keys) > 0
+        return self.total_keys > 0
+
+    def get_health_status(self) -> List[Dict[str, Any]]:
+        """Get health status of all keys (for Admin Dashboard)."""
+        result = []
+        db_keys = self._get_db_keys()
+        for key in db_keys:
+            result.append({
+                'id': key.pk,
+                'label': key.label,
+                'hint': key.key_hint,
+                'status': key.status,
+                'is_available': key.is_available(),
+                'error_count': key.error_count,
+                'total_requests': key.total_requests,
+                'last_latency_ms': key.last_latency_ms,
+                'last_success_at': key.last_success_at,
+                'last_error': key.last_error,
+                'rpm_limit': key.rpm_limit,
+                'tokens_used_today': key.tokens_used_today,
+                'cooldown_until': key.cooldown_until,
+            })
+        return result
 
 
-# ========== Smart Text Chunking ==========
+# Legacy compatibility: Alias
+APIKeyManager = HydraKeyManager
+
+
+# ========================================================================
+# Smart Text Chunking (DB-Configured)
+# ========================================================================
 
 class SmartChunker:
     """
     تقسيم ذكي للنصوص الكبيرة.
-    يحافظ على السياق بين الأجزاء عبر التداخل (overlap).
-    يقسم عند حدود الجمل/الفقرات وليس في منتصف الكلمات.
+    Reads chunk_size and overlap from AIConfiguration (DB).
     """
 
-    def __init__(self, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP):
-        self.chunk_size = chunk_size
-        self.overlap = overlap
+    def __init__(self, chunk_size: int = None, overlap: int = None):
+        if chunk_size is None or overlap is None:
+            try:
+                from apps.ai_features.models import AIConfiguration
+                config = AIConfiguration.get_config()
+                self.chunk_size = chunk_size or config.chunk_size
+                self.overlap = overlap or config.chunk_overlap
+            except Exception:
+                self.chunk_size = chunk_size or FALLBACK_CHUNK_SIZE
+                self.overlap = overlap or FALLBACK_CHUNK_OVERLAP
+        else:
+            self.chunk_size = chunk_size
+            self.overlap = overlap
 
     def chunk_text(self, text: str) -> List[str]:
         """تقسيم النص إلى أجزاء ذكية."""
@@ -265,7 +370,6 @@ class SmartChunker:
             if not para:
                 continue
 
-            # إذا كانت الفقرة نفسها أكبر من الحجم المطلوب، قسّمها بالجمل
             if len(para) > self.chunk_size:
                 if current_chunk:
                     chunks.append(current_chunk.strip())
@@ -274,11 +378,9 @@ class SmartChunker:
                 chunks.extend(sentence_chunks)
                 continue
 
-            # إذا إضافة الفقرة ستتجاوز الحجم المطلوب
             if len(current_chunk) + len(para) + 2 > self.chunk_size:
                 if current_chunk:
                     chunks.append(current_chunk.strip())
-                    # التداخل: أخذ آخر جزء من الـ chunk السابق
                     overlap_text = current_chunk[-self.overlap:] if len(current_chunk) > self.overlap else ""
                     current_chunk = overlap_text + "\n\n" + para
                 else:
@@ -289,12 +391,11 @@ class SmartChunker:
         if current_chunk.strip():
             chunks.append(current_chunk.strip())
 
-        logger.info(f"SmartChunker: Split {len(text)} chars into {len(chunks)} chunks")
+        logger.info(f"SmartChunker: Split {len(text)} chars into {len(chunks)} chunks (size={self.chunk_size})")
         return chunks
 
     def _split_by_sentences(self, text: str) -> List[str]:
         """تقسيم النص بالجمل."""
-        # فواصل الجمل العربية والإنجليزية
         separators = ['. ', '.\n', '。', '؟ ', '? ', '! ', '！ ', '.\t']
         sentences = [text]
         for sep in separators:
@@ -328,37 +429,30 @@ class SmartChunker:
 # ========== File-Based AI Storage ==========
 
 class AIFileStorage:
-    """
-    مخزن ملفات AI - يحفظ المخرجات كملفات .md في media/ai_generated/.
-    لا يُخزّن النص في قاعدة البيانات أبداً.
-    """
+    """مخزن ملفات AI - يحفظ المخرجات كملفات .md في media/ai_generated/."""
 
     def __init__(self):
         self.base_dir = Path(settings.MEDIA_ROOT) / AI_OUTPUT_DIR
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def save_summary(self, file_id: int, content: str, metadata: Optional[Dict] = None) -> str:
-        """حفظ ملخص كملف Markdown."""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"summary_{file_id}_{timestamp}.md"
         return self._save_file(filename, content, metadata, "summary")
 
     def save_questions(self, file_id: int, questions_data: List[Dict], metadata: Optional[Dict] = None) -> str:
-        """حفظ أسئلة كملف Markdown."""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"questions_{file_id}_{timestamp}.md"
         md_content = self._questions_to_markdown(questions_data, metadata)
         return self._save_file(filename, md_content, None, "questions")
 
     def save_chat_answer(self, file_id: int, user_id: int, question: str, answer: str) -> str:
-        """حفظ إجابة محادثة."""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"chat_{file_id}_{user_id}_{timestamp}.md"
         content = f"# سؤال\n\n{question}\n\n# إجابة\n\n{answer}\n"
         return self._save_file(filename, content, None, "chat")
 
     def read_file(self, relative_path: str) -> Optional[str]:
-        """قراءة ملف AI من المسار النسبي."""
         full_path = Path(settings.MEDIA_ROOT) / relative_path
         try:
             if full_path.exists():
@@ -368,7 +462,6 @@ class AIFileStorage:
         return None
 
     def delete_file(self, relative_path: str) -> bool:
-        """حذف ملف AI."""
         full_path = Path(settings.MEDIA_ROOT) / relative_path
         try:
             if full_path.exists():
@@ -380,8 +473,6 @@ class AIFileStorage:
         return False
 
     def _save_file(self, filename: str, content: str, metadata: Optional[Dict], category: str) -> str:
-        """حفظ ملف داخلي."""
-        # إنشاء مجلد فرعي حسب التصنيف
         category_dir = self.base_dir / category
         category_dir.mkdir(parents=True, exist_ok=True)
 
@@ -394,13 +485,11 @@ class AIFileStorage:
             header += "---\n\n"
 
         filepath.write_text(header + content, encoding='utf-8')
-        # المسار النسبي من MEDIA_ROOT
         relative_path = str(Path(AI_OUTPUT_DIR) / category / filename)
         logger.info(f"AIFileStorage: Saved {relative_path} ({len(content)} chars)")
         return relative_path
 
     def _questions_to_markdown(self, questions: List[Dict], metadata: Optional[Dict] = None) -> str:
-        """تحويل بيانات الأسئلة إلى Markdown منسق."""
         lines = ["# بنك الأسئلة المُولَّدة بالذكاء الاصطناعي\n"]
 
         if metadata:
@@ -464,7 +553,6 @@ def cache_result(timeout: int = CACHE_TIMEOUT):
 
 
 def _generate_cache_key(func_name: str, text: str, args: tuple, kwargs: dict) -> str:
-    """توليد مفتاح الكاش."""
     content = f"{func_name}:{text[:200]}:{str(args)}:{str(sorted(kwargs.items()))}"
     return f"ai:{hashlib.md5(content.encode()).hexdigest()}"
 
@@ -579,29 +667,53 @@ class TextExtractorFactory:
         return extractor.extract(file_path)
 
 
-# ========== Gemini Service (Enterprise) ==========
+# ========================================================================
+# Gemini Service (Enterprise v2 - DB Governed)
+# ========================================================================
+
+def _get_ai_config():
+    """Helper to get AI configuration from DB with fallback."""
+    try:
+        from apps.ai_features.models import AIConfiguration
+        return AIConfiguration.get_config()
+    except Exception:
+        return None
+
 
 class GeminiService:
     """
-    خدمة Google Gemini للذكاء الاصطناعي - الإصدار المؤسسي.
+    خدمة Google Gemini للذكاء الاصطناعي - Enterprise v2.
 
-    الميزات:
-    - Round-Robin Key Manager لتجنب Rate Limits
-    - Smart Chunking للنصوص الكبيرة
-    - File-Based Storage (لا يُخزّن نص AI في DB)
-    - User Notes للسياق الإضافي
-    - Question Matrix لتوليد أسئلة متعددة الأنواع
-    - Retry مع Exponential Backoff
-    - Caching ذكي
+    === Dynamic Governance ===
+    - Model, tokens, temperature: Read from AIConfiguration (DB)
+    - API Keys: Managed by HydraKeyManager (DB + .env fallback)
+    - Chunk size: Read from AIConfiguration (DB)
+    - Rate limits: Per-user (DB) + Per-key RPM (DB)
+    - Service toggle: Can be disabled from Admin panel
+
+    === Admin Editable (No Code Touch) ===
+    - Change model: Admin -> AI Configuration -> active_model
+    - Add keys: Admin -> API Keys -> Add
+    - Change RPM: Admin -> API Keys -> rpm_limit
+    - Disable service: Admin -> AI Configuration -> is_service_enabled
     """
 
-    def __init__(self, model: str = GEMINI_MODEL):
-        self._model_name = model
-        self._key_manager = APIKeyManager()
+    def __init__(self, model: str = None):
+        config = _get_ai_config()
+        self._model_name = model or (config.active_model if config else FALLBACK_MODEL)
+        self._key_manager = HydraKeyManager()
         self._chunker = SmartChunker()
         self._storage = AIFileStorage()
         self._client = None
+        self._current_key_obj = None
         self._initialize_client()
+
+    def _check_service_enabled(self):
+        """Check if AI service is enabled by admin."""
+        config = _get_ai_config()
+        if config and not config.is_service_enabled:
+            msg = config.maintenance_message or 'خدمة الذكاء الاصطناعي متوقفة مؤقتاً.'
+            raise GeminiServiceDisabledError(msg)
 
     def _initialize_client(self) -> None:
         """تهيئة عميل Gemini باستخدام المفتاح الحالي."""
@@ -610,21 +722,25 @@ class GeminiService:
             return
         try:
             from google import genai
-            current_key = self._key_manager.get_key()
-            self._client = genai.Client(api_key=current_key)
+            key_obj, raw_key = self._key_manager.get_next_key()
+            self._current_key_obj = key_obj
+            self._client = genai.Client(api_key=raw_key)
             logger.info(f"GeminiService initialized with model: {self._model_name}")
         except ImportError:
             raise GeminiConfigurationError("google-genai not installed. Run: pip install google-genai")
+        except GeminiConfigurationError:
+            logger.warning("GeminiService: No keys available for initialization.")
         except Exception as e:
             raise GeminiConfigurationError(f"Failed to initialize Gemini client: {e}")
 
-    def _reinitialize_with_next_key(self) -> None:
+    def _reinitialize_with_next_key(self, error_msg: str = '', is_rate_limit: bool = False) -> None:
         """إعادة تهيئة العميل بالمفتاح التالي."""
-        self._key_manager.rotate_key()
+        self._key_manager.rotate_after_error(self._current_key_obj, error_msg, is_rate_limit)
         try:
             from google import genai
-            next_key = self._key_manager.get_key()
-            self._client = genai.Client(api_key=next_key)
+            key_obj, raw_key = self._key_manager.get_next_key()
+            self._current_key_obj = key_obj
+            self._client = genai.Client(api_key=raw_key)
             logger.info("GeminiService: Reinitialized with next API key")
         except Exception as e:
             logger.error(f"GeminiService: Failed to reinitialize: {e}")
@@ -637,64 +753,86 @@ class GeminiService:
     def storage(self) -> AIFileStorage:
         return self._storage
 
-    def _generate_content(self, prompt: str, max_tokens: int = 2000) -> str:
-        """توليد محتوى مع Round-Robin retry."""
+    def _generate_content(self, prompt: str, max_tokens: int = None) -> str:
+        """توليد محتوى مع Hydra Round-Robin retry."""
+        self._check_service_enabled()
+
         if not self.is_available:
             raise GeminiConfigurationError("Gemini client not initialized")
+
+        # Get config from DB
+        config = _get_ai_config()
+        if max_tokens is None:
+            max_tokens = config.max_output_tokens if config else FALLBACK_MAX_OUTPUT_TOKENS
+        temperature = config.temperature if config else FALLBACK_TEMPERATURE
 
         last_exception = None
         max_attempts = min(self._key_manager.total_keys, MAX_RETRIES) if self._key_manager.total_keys > 0 else MAX_RETRIES
 
-        for attempt in range(max_attempts):
+        for attempt in range(max(max_attempts, 1)):
             try:
                 from google import genai
                 from google.genai import types
+
+                start_ms = int(time.time() * 1000)
 
                 response = self._client.models.generate_content(
                     model=self._model_name,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         max_output_tokens=max_tokens,
-                        temperature=0.3,
+                        temperature=temperature,
                     )
                 )
+
+                latency_ms = int(time.time() * 1000) - start_ms
+
                 if response.text:
+                    # Mark success on the current key
+                    if self._current_key_obj:
+                        self._current_key_obj.mark_success(latency_ms)
                     return response.text.strip()
                 else:
                     raise GeminiAPIError("Empty response from Gemini")
 
+            except GeminiServiceDisabledError:
+                raise
             except Exception as e:
                 last_exception = e
                 error_str = str(e).lower()
 
-                if "rate" in error_str or "quota" in error_str or "429" in error_str or "resource_exhausted" in error_str:
+                is_rate_limit = any(kw in error_str for kw in [
+                    "rate", "quota", "429", "resource_exhausted"
+                ])
+
+                if is_rate_limit:
                     logger.warning(f"Rate limit on attempt {attempt + 1}, rotating key...")
-                    self._reinitialize_with_next_key()
-                    
-                    # Extract retry delay from error if available
-                    import re
-                    retry_match = re.search(r'retry in (\d+)', str(e).lower())
+                    self._reinitialize_with_next_key(str(e), is_rate_limit=True)
+
+                    retry_match = re.search(r'retry in (\d+)', error_str)
                     if retry_match:
-                        wait_time = min(int(retry_match.group(1)), 60)  # Max 60 seconds
+                        wait_time = min(int(retry_match.group(1)), 60)
                     else:
-                        wait_time = min(5.0 * (2 ** attempt), 30)  # Exponential backoff, max 30s
-                    
+                        wait_time = min(5.0 * (2 ** attempt), 30)
+
                     time.sleep(wait_time)
                     continue
                 elif "invalid" in error_str and "key" in error_str:
                     logger.error(f"Invalid API key, rotating...")
-                    self._reinitialize_with_next_key()
+                    self._reinitialize_with_next_key(str(e), is_rate_limit=False)
                     continue
                 else:
                     if attempt < max_attempts - 1:
                         time.sleep(1.0 * (2 ** attempt))
-                        self._reinitialize_with_next_key()
+                        self._reinitialize_with_next_key(str(e), is_rate_limit=False)
                         continue
                     raise GeminiAPIError(f"Gemini API error: {e}")
 
-        # Provide a user-friendly Arabic error message for quota exhaustion
-        if last_exception and ("quota" in str(last_exception).lower() or "429" in str(last_exception)):
-            raise GeminiRateLimitError("⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.")
+        if last_exception and any(kw in str(last_exception).lower() for kw in ["quota", "429", "rate"]):
+            raise GeminiRateLimitError(
+                "⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، "
+                "أو تواصل مع المسؤول لإضافة مفاتيح API إضافية."
+            )
         raise last_exception or GeminiAPIError("All API keys exhausted")
 
     # ========== Public Methods ==========
@@ -715,15 +853,12 @@ class GeminiService:
 
     @cache_result(timeout=CACHE_TIMEOUT)
     def generate_summary(self, text: str, max_length: int = 500, user_notes: str = "") -> str:
-        """
-        توليد تلخيص للنص مع دعم Smart Chunking و user_notes.
-        """
+        """توليد تلخيص للنص مع دعم Smart Chunking."""
         chunks = self._chunker.chunk_text(text)
 
         if len(chunks) <= 1:
             return self._generate_single_summary(text, max_length, user_notes)
 
-        # تلخيص كل جزء ثم تلخيص الملخصات
         chunk_summaries = []
         for i, chunk in enumerate(chunks):
             try:
@@ -745,8 +880,9 @@ class GeminiService:
         )
 
     def _generate_single_summary(self, text: str, max_length: int = 500, user_notes: str = "") -> str:
-        """توليد تلخيص لنص واحد."""
         notes_section = f"\nملاحظات إضافية من المستخدم: {user_notes}" if user_notes else ""
+        config = _get_ai_config()
+        input_limit = config.chunk_size if config else FALLBACK_CHUNK_SIZE
 
         prompt = f"""أنت مساعد أكاديمي متخصص في تلخيص المحتوى التعليمي باللغة العربية.
 
@@ -758,7 +894,7 @@ class GeminiService:
 {notes_section}
 
 النص:
-{text[:MAX_INPUT_LENGTH]}
+{text[:input_limit]}
 
 التلخيص (بحد أقصى {max_length} كلمة، بصيغة Markdown):"""
 
@@ -780,19 +916,17 @@ class GeminiService:
         return summary.strip() or text[:max_length * 4] + "..."
 
     def generate_questions_matrix(
-        self,
-        text: str,
-        matrix: QuestionMatrixConfig,
-        user_notes: str = ""
+        self, text: str, matrix: QuestionMatrixConfig, user_notes: str = ""
     ) -> List[Dict[str, Any]]:
-        """
-        توليد أسئلة حسب المصفوفة المحددة (أنواع + أعداد + درجات).
-        """
+        """توليد أسئلة حسب المصفوفة المحددة."""
         if matrix.total_questions == 0:
             return []
 
         chunks = self._chunker.chunk_text(text)
-        source_text = chunks[0] if chunks else text[:MAX_INPUT_LENGTH]
+        config = _get_ai_config()
+        input_limit = config.chunk_size if config else FALLBACK_CHUNK_SIZE
+
+        source_text = chunks[0] if chunks else text[:input_limit]
         if len(chunks) > 1:
             source_text = "\n\n---\n\n".join(chunks[:3])
 
@@ -834,7 +968,7 @@ class GeminiService:
 - تأكد أن الأسئلة متنوعة وتغطي أجزاء مختلفة من النص
 
 النص:
-{source_text[:MAX_INPUT_LENGTH]}
+{source_text[:input_limit]}
 
 الأسئلة (JSON فقط):"""
 
@@ -847,11 +981,8 @@ class GeminiService:
 
     @cache_result(timeout=CACHE_TIMEOUT)
     def generate_questions(
-        self,
-        text: str,
-        question_type: QuestionType = QuestionType.MIXED,
-        num_questions: int = 5,
-        user_notes: str = ""
+        self, text: str, question_type: QuestionType = QuestionType.MIXED,
+        num_questions: int = 5, user_notes: str = ""
     ) -> List[Dict[str, Any]]:
         """توليد أسئلة (واجهة متوافقة مع الإصدار القديم)."""
         matrix = QuestionMatrixConfig()
@@ -861,15 +992,13 @@ class GeminiService:
             matrix.true_false_count = num_questions
         elif question_type == QuestionType.SHORT_ANSWER:
             matrix.short_answer_count = num_questions
-        else:  # MIXED
+        else:
             matrix.mcq_count = max(1, num_questions // 3)
             matrix.true_false_count = max(1, num_questions // 3)
             matrix.short_answer_count = num_questions - matrix.mcq_count - matrix.true_false_count
-
         return self.generate_questions_matrix(text, matrix, user_notes)
 
     def _parse_questions_json(self, result: str) -> List[Dict[str, Any]]:
-        """تحليل JSON الأسئلة."""
         result = result.strip()
         if '```json' in result:
             result = result.split('```json')[1].split('```')[0]
@@ -898,9 +1027,10 @@ class GeminiService:
     def ask_document(self, text: str, question: str, user_notes: str = "") -> str:
         """الإجابة على سؤال من سياق المستند."""
         chunks = self._chunker.chunk_text(text)
-        context = chunks[0] if chunks else text[:MAX_INPUT_LENGTH]
+        config = _get_ai_config()
+        input_limit = config.chunk_size if config else FALLBACK_CHUNK_SIZE
+        context = chunks[0] if chunks else text[:input_limit]
 
-        # إذا كان النص كبيراً، ابحث عن الأجزاء الأكثر صلة
         if len(chunks) > 1:
             context = self._find_relevant_chunks(chunks, question)
 
@@ -930,20 +1060,18 @@ class GeminiService:
             return "عذراً، حدث خطأ أثناء معالجة سؤالك. يرجى المحاولة مرة أخرى."
 
     def _find_relevant_chunks(self, chunks: List[str], question: str) -> str:
-        """البحث عن الأجزاء الأكثر صلة بالسؤال."""
         question_words = set(question.lower().split())
         scored = []
         for chunk in chunks:
             chunk_words = set(chunk.lower().split())
             overlap = len(question_words & chunk_words)
             scored.append((overlap, chunk))
-
         scored.sort(key=lambda x: x[0], reverse=True)
         top_chunks = [c[1] for c in scored[:3]]
         return "\n\n---\n\n".join(top_chunks)
 
     def generate_and_save_summary(self, file_obj, user_notes: str = "") -> AIResponse:
-        """توليد ملخص وحفظه كملف .md (الواجهة الموحدة)."""
+        """توليد ملخص وحفظه كملف .md."""
         text = self.extract_text_from_file(file_obj)
         if not text:
             return AIResponse(success=False, error='لا يمكن استخراج النص من الملف')
@@ -966,12 +1094,9 @@ class GeminiService:
             return AIResponse(success=False, error=str(e))
 
     def generate_and_save_questions(
-        self,
-        file_obj,
-        matrix: QuestionMatrixConfig,
-        user_notes: str = ""
+        self, file_obj, matrix: QuestionMatrixConfig, user_notes: str = ""
     ) -> AIResponse:
-        """توليد أسئلة وحفظها كملف .md (الواجهة الموحدة)."""
+        """توليد أسئلة وحفظها كملف .md."""
         text = self.extract_text_from_file(file_obj)
         if not text:
             return AIResponse(success=False, error='لا يمكن استخراج النص من الملف')
@@ -1001,13 +1126,15 @@ class GeminiService:
     def test_connection(self) -> AIResponse:
         """اختبار الاتصال."""
         try:
+            start_ms = int(time.time() * 1000)
             response = self._generate_content("قل: مرحباً، أنا جاهز!", max_tokens=50)
-            return AIResponse(success=True, data=response)
+            latency = int(time.time() * 1000) - start_ms
+            return AIResponse(success=True, data={'response': response, 'latency_ms': latency})
         except GeminiError as e:
             return AIResponse(success=False, error=str(e))
 
 
-# ========== Celery Tasks (Optional - Backward Compatible) ==========
+# ========== Celery Tasks (Optional) ==========
 
 try:
     from celery import shared_task
@@ -1022,7 +1149,6 @@ except ImportError:
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def generate_summary_async(self, file_id: int, user_notes: str = "") -> Dict[str, Any]:
-    """مهمة Celery لتوليد التلخيص."""
     from apps.courses.models import LectureFile
     from apps.ai_features.models import AISummary
 
@@ -1037,7 +1163,7 @@ def generate_summary_async(self, file_id: int, user_notes: str = "") -> Dict[str
                 defaults={
                     'summary_text': result.data[:200] + '...' if len(result.data) > 200 else result.data,
                     'is_cached': True,
-                    'model_used': GEMINI_MODEL,
+                    'model_used': service._model_name,
                 }
             )
             return {'success': True, 'md_file_path': result.md_file_path}
@@ -1054,13 +1180,9 @@ def generate_summary_async(self, file_id: int, user_notes: str = "") -> Dict[str
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def generate_questions_async(
-    self,
-    file_id: int,
-    question_type: str = 'mixed',
-    num_questions: int = 5,
-    user_notes: str = ""
+    self, file_id: int, question_type: str = 'mixed',
+    num_questions: int = 5, user_notes: str = ""
 ) -> Dict[str, Any]:
-    """مهمة Celery لتوليد الأسئلة."""
     from apps.courses.models import LectureFile
     from apps.ai_features.models import AIGeneratedQuestion
 

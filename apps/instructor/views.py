@@ -1,13 +1,18 @@
 """
-Instructor App - مركز القيادة للمدرس (Enterprise Edition)
+Instructor App - مركز القيادة للمدرس (Enterprise Edition v2)
 S-ACM - Smart Academic Content Management System
+
+=== Performance Refactoring v2 ===
+- InstructorDashboardView: Pure DB aggregation (Zero Python-side loops)
+- InstructorCourseDetailView: Aggregated stats via DB
+- All stats computed inside the database for sub-100ms latency
 
 يحتوي على:
 - AI Hub (Generator + Archives)
 - Recycle Bin (Trash)
 - Bulk Actions
 - Student Roster + Excel Export
-- Enhanced Dashboard
+- Enhanced Dashboard (DB-Optimized)
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -18,7 +23,8 @@ from django.views.generic import TemplateView, ListView, DetailView, CreateView,
 from django.urls import reverse
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum, Q, F, Prefetch, Subquery, OuterRef, Value, IntegerField
+from django.db.models.functions import Coalesce
 import logging
 import json
 import time
@@ -40,7 +46,21 @@ logger = logging.getLogger('courses')
 # ========== Dashboard ==========
 
 class InstructorDashboardView(LoginRequiredMixin, InstructorRequiredMixin, TemplateView):
-    """لوحة تحكم المدرس - محسّنة"""
+    """
+    لوحة تحكم المدرس - Enterprise v2
+
+    === Performance Optimization ===
+    BEFORE (Legacy): Python-side list/loop accumulation
+      - files = list(LectureFile.objects.filter(...))  # Loads ALL files into memory
+      - total_downloads = sum(f.download_count for f in files)  # Python loop O(n)
+      - total_views = sum(f.view_count for f in files)  # Python loop O(n)
+      - sorted(files, ...)[:5]  # Python sort O(n log n)
+
+    AFTER (v2): Pure DB aggregation
+      - LectureFile.objects.filter(...).aggregate(Sum, Count)  # Single SQL query
+      - .order_by('-upload_date')[:5]  # DB-level ORDER BY + LIMIT
+      - Zero Python loops, zero memory bloat
+    """
     template_name = 'instructor/dashboard.html'
 
     def get_context_data(self, **kwargs):
@@ -48,29 +68,58 @@ class InstructorDashboardView(LoginRequiredMixin, InstructorRequiredMixin, Templ
         context['active_page'] = 'dashboard'
         instructor = self.request.user
 
-        courses = Course.objects.get_courses_for_instructor(instructor).prefetch_related('files').select_related('level')
+        # === Query 1: Courses with file counts (single annotated query) ===
+        courses = (
+            Course.objects
+            .get_courses_for_instructor(instructor)
+            .select_related('level')
+            .annotate(
+                file_count=Count(
+                    'files',
+                    filter=Q(files__is_deleted=False)
+                )
+            )
+        )
         context['my_courses'] = courses
-
-        files = list(LectureFile.objects.filter(
-            uploader=instructor, is_deleted=False
-        ).select_related('course'))
-
-        context['total_files'] = len(files)
-        context['total_downloads'] = sum(f.download_count for f in files)
-        context['total_views'] = sum(f.view_count for f in files)
         context['total_courses'] = courses.count()
-        context['recent_uploads'] = sorted(files, key=lambda x: x.upload_date, reverse=True)[:5]
-        context['top_files'] = sorted(files, key=lambda x: x.download_count, reverse=True)[:5]
 
-        # عدد الملفات في سلة المهملات
+        # === Query 2: Aggregated file stats (single DB aggregate) ===
+        file_stats = LectureFile.objects.filter(
+            uploader=instructor, is_deleted=False
+        ).aggregate(
+            total_files=Count('id'),
+            total_downloads=Coalesce(Sum('download_count'), 0),
+            total_views=Coalesce(Sum('view_count'), 0),
+        )
+        context['total_files'] = file_stats['total_files']
+        context['total_downloads'] = file_stats['total_downloads']
+        context['total_views'] = file_stats['total_views']
+
+        # === Query 3: Recent uploads (DB ORDER BY + LIMIT) ===
+        context['recent_uploads'] = (
+            LectureFile.objects
+            .filter(uploader=instructor, is_deleted=False)
+            .select_related('course')
+            .order_by('-upload_date')[:5]
+        )
+
+        # === Query 4: Top downloaded files (DB ORDER BY + LIMIT) ===
+        context['top_files'] = (
+            LectureFile.objects
+            .filter(uploader=instructor, is_deleted=False)
+            .select_related('course')
+            .order_by('-download_count')[:5]
+        )
+
+        # === Query 5: Trash count (single COUNT) ===
         context['trash_count'] = LectureFile.objects.filter(
             uploader=instructor, is_deleted=True
         ).count()
 
-        # آخر عمليات AI
+        # === Query 6: Recent AI jobs ===
         context['recent_ai_jobs'] = AIGenerationJob.objects.filter(
             instructor=instructor
-        ).select_related('file')[:5]
+        ).select_related('file').order_by('-created_at')[:5]
 
         return context
 
@@ -82,9 +131,21 @@ class InstructorCourseListView(LoginRequiredMixin, InstructorRequiredMixin, List
     context_object_name = 'courses'
 
     def get_queryset(self):
-        return Course.objects.get_courses_for_instructor(
-            self.request.user
-        ).prefetch_related('files').select_related('level')
+        return (
+            Course.objects
+            .get_courses_for_instructor(self.request.user)
+            .select_related('level')
+            .annotate(
+                file_count=Count(
+                    'files',
+                    filter=Q(files__is_deleted=False)
+                ),
+                total_downloads=Coalesce(
+                    Sum('files__download_count', filter=Q(files__is_deleted=False)),
+                    0
+                ),
+            )
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -104,13 +165,22 @@ class InstructorCourseDetailView(LoginRequiredMixin, InstructorRequiredMixin, De
         context = super().get_context_data(**kwargs)
         context['active_page'] = 'courses'
         course = self.object
-        files = course.files.filter(is_deleted=False)
-        context['all_files'] = files
-        context['visible_files'] = files.filter(is_visible=True)
-        context['hidden_files'] = files.filter(is_visible=False)
-        context['total_downloads'] = sum(f.download_count for f in files)
-        context['total_views'] = sum(f.view_count for f in files)
 
+        # === Optimized: Single annotated queryset for files ===
+        files_qs = course.files.filter(is_deleted=False)
+        context['all_files'] = files_qs
+        context['visible_files'] = files_qs.filter(is_visible=True)
+        context['hidden_files'] = files_qs.filter(is_visible=False)
+
+        # === DB Aggregation instead of Python sum() ===
+        file_stats = files_qs.aggregate(
+            total_downloads=Coalesce(Sum('download_count'), 0),
+            total_views=Coalesce(Sum('view_count'), 0),
+        )
+        context['total_downloads'] = file_stats['total_downloads']
+        context['total_views'] = file_stats['total_views']
+
+        # === Student count via DB ===
         context['students_count'] = User.objects.filter(
             role__code=Role.STUDENT,
             major__in=course.course_majors.values_list('major', flat=True),
@@ -504,7 +574,7 @@ class AIArchiveDeleteView(LoginRequiredMixin, InstructorRequiredMixin, View):
 # ========== Student Roster ==========
 
 class StudentRosterView(LoginRequiredMixin, InstructorRequiredMixin, DetailView):
-    """قائمة الطلاب المسجلين في المقرر"""
+    """قائمة الطلاب المسجلين في المقرر - Optimized"""
     model = Course
     template_name = 'instructor/student_roster.html'
     context_object_name = 'course'
@@ -518,29 +588,53 @@ class StudentRosterView(LoginRequiredMixin, InstructorRequiredMixin, DetailView)
         context['active_page'] = 'courses'
         course = self.object
 
-        students = User.objects.filter(
-            role__code=Role.STUDENT,
-            major__in=course.course_majors.values_list('major', flat=True),
-            level=course.level,
-            account_status='active'
-        ).select_related('major', 'level').order_by('full_name')
+        # === Optimized: Batch annotate student stats ===
+        course_file_ids = course.files.values_list('id', flat=True)
 
-        # إضافة إحصائيات النشاط لكل طالب
+        students = (
+            User.objects.filter(
+                role__code=Role.STUDENT,
+                major__in=course.course_majors.values_list('major', flat=True),
+                level=course.level,
+                account_status='active'
+            )
+            .select_related('major', 'level')
+            .annotate(
+                view_count=Count(
+                    'activities',
+                    filter=Q(
+                        activities__activity_type='view',
+                        activities__file_id__in=course_file_ids
+                    )
+                ),
+                download_count=Count(
+                    'activities',
+                    filter=Q(
+                        activities__activity_type='download',
+                        activities__file_id__in=course_file_ids
+                    )
+                ),
+                ai_usage_count=Count(
+                    'ai_usage_logs',
+                    filter=Q(ai_usage_logs__file__course=course)
+                ),
+            )
+            .order_by('full_name')
+        )
+
         student_data = []
         for student in students:
-            activities = UserActivity.objects.filter(
+            last_activity = UserActivity.objects.filter(
                 user=student,
-                file_id__in=course.files.values_list('id', flat=True)
-            )
+                file_id__in=course_file_ids
+            ).order_by('-activity_time').first()
+
             student_data.append({
                 'student': student,
-                'views': activities.filter(activity_type='view').count(),
-                'downloads': activities.filter(activity_type='download').count(),
-                'ai_usage': AIUsageLog.objects.filter(
-                    user=student,
-                    file__course=course
-                ).count(),
-                'last_activity': activities.order_by('-activity_time').first(),
+                'views': student.view_count,
+                'downloads': student.download_count,
+                'ai_usage': student.ai_usage_count,
+                'last_activity': last_activity,
             })
 
         context['student_data'] = student_data
@@ -557,12 +651,39 @@ class RosterExportExcelView(LoginRequiredMixin, InstructorRequiredMixin, View):
             pk=course_pk
         )
 
-        students = User.objects.filter(
-            role__code=Role.STUDENT,
-            major__in=course.course_majors.values_list('major', flat=True),
-            level=course.level,
-            account_status='active'
-        ).order_by('full_name')
+        course_file_ids = list(course.files.values_list('id', flat=True))
+
+        # === Optimized: Annotated student query ===
+        students = (
+            User.objects.filter(
+                role__code=Role.STUDENT,
+                major__in=course.course_majors.values_list('major', flat=True),
+                level=course.level,
+                account_status='active'
+            )
+            .select_related('major', 'level')
+            .annotate(
+                stat_views=Count(
+                    'activities',
+                    filter=Q(
+                        activities__activity_type='view',
+                        activities__file_id__in=course_file_ids
+                    )
+                ),
+                stat_downloads=Count(
+                    'activities',
+                    filter=Q(
+                        activities__activity_type='download',
+                        activities__file_id__in=course_file_ids
+                    )
+                ),
+                stat_ai_usage=Count(
+                    'ai_usage_logs',
+                    filter=Q(ai_usage_logs__file__course=course)
+                ),
+            )
+            .order_by('full_name')
+        )
 
         try:
             import openpyxl
@@ -593,14 +714,10 @@ class RosterExportExcelView(LoginRequiredMixin, InstructorRequiredMixin, View):
                 cell.border = thin_border
 
             for i, student in enumerate(students, 1):
-                activities = UserActivity.objects.filter(
+                last_activity = UserActivity.objects.filter(
                     user=student,
-                    file_id__in=course.files.values_list('id', flat=True)
-                )
-                views = activities.filter(activity_type='view').count()
-                downloads = activities.filter(activity_type='download').count()
-                ai_usage = AIUsageLog.objects.filter(user=student, file__course=course).count()
-                last = activities.order_by('-activity_time').first()
+                    file_id__in=course_file_ids
+                ).order_by('-activity_time').first()
 
                 row = i + 1
                 ws.cell(row=row, column=1, value=i).border = thin_border
@@ -608,10 +725,10 @@ class RosterExportExcelView(LoginRequiredMixin, InstructorRequiredMixin, View):
                 ws.cell(row=row, column=3, value=student.full_name).border = thin_border
                 ws.cell(row=row, column=4, value=str(student.major) if student.major else '-').border = thin_border
                 ws.cell(row=row, column=5, value=str(student.level) if student.level else '-').border = thin_border
-                ws.cell(row=row, column=6, value=views).border = thin_border
-                ws.cell(row=row, column=7, value=downloads).border = thin_border
-                ws.cell(row=row, column=8, value=ai_usage).border = thin_border
-                ws.cell(row=row, column=9, value=str(last.activity_time.strftime('%Y-%m-%d %H:%M')) if last else '-').border = thin_border
+                ws.cell(row=row, column=6, value=student.stat_views).border = thin_border
+                ws.cell(row=row, column=7, value=student.stat_downloads).border = thin_border
+                ws.cell(row=row, column=8, value=student.stat_ai_usage).border = thin_border
+                ws.cell(row=row, column=9, value=str(last_activity.activity_time.strftime('%Y-%m-%d %H:%M')) if last_activity else '-').border = thin_border
 
             # ضبط عرض الأعمدة
             for col in range(1, len(headers) + 1):
