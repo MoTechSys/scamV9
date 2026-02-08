@@ -1,0 +1,84 @@
+[2026-02-08 08:36:31] INFO [ai_features:208] APIKeyManager: Loaded 1 API key(s)
+[2026-02-08 10:00:15] INFO [ai_features:208] APIKeyManager: Loaded 1 API key(s)
+[2026-02-08 11:06:56] INFO [ai_features:208] APIKeyManager: Loaded 1 API key(s)
+[2026-02-08 11:06:59] INFO [ai_features:615] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 11:06:59] INFO [ai_features:698] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-08 11:07:00] WARNING [ai_features:671] Rate limit on attempt 1, rotating key...
+[2026-02-08 11:07:00] INFO [ai_features:228] APIKeyManager: Rotated to key index 0
+[2026-02-08 11:07:01] INFO [ai_features:628] GeminiService: Reinitialized with next API key
+[2026-02-08 11:07:36] INFO [ai_features:615] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 11:07:36] INFO [ai_features:698] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-08 11:07:37] WARNING [ai_features:671] Rate limit on attempt 1, rotating key...
+[2026-02-08 11:07:37] INFO [ai_features:228] APIKeyManager: Rotated to key index 0
+[2026-02-08 11:07:38] INFO [ai_features:628] GeminiService: Reinitialized with next API key
+[2026-02-08 11:08:23] INFO [ai_features:615] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 11:08:23] INFO [ai_features:698] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-08 11:08:24] WARNING [ai_features:671] Rate limit on attempt 1, rotating key...
+[2026-02-08 11:08:24] INFO [ai_features:228] APIKeyManager: Rotated to key index 0
+[2026-02-08 11:08:25] INFO [ai_features:628] GeminiService: Reinitialized with next API key
+[2026-02-08 11:17:06] INFO [ai_features:208] APIKeyManager: Loaded 1 API key(s)
+[2026-02-08 11:17:09] INFO [ai_features:615] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 11:17:09] INFO [ai_features:698] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-08 11:17:13] WARNING [ai_features:671] Rate limit on attempt 1, rotating key...
+[2026-02-08 11:17:13] INFO [ai_features:228] APIKeyManager: Rotated to key index 0
+[2026-02-08 11:17:14] INFO [ai_features:628] GeminiService: Reinitialized with next API key
+[2026-02-08 11:28:20] INFO [ai_features:615] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 11:28:20] WARNING [ai_features:693] File 5 has no local file
+[2026-02-08 11:28:28] INFO [ai_features:615] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 11:28:28] WARNING [ai_features:693] File 5 has no local file
+[2026-02-08 11:34:18] INFO [ai_features:615] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 11:34:18] INFO [ai_features:698] Extracted 3251 characters from mm.txt
+[2026-02-08 11:34:19] WARNING [ai_features:671] Rate limit on attempt 1, rotating key...
+[2026-02-08 11:34:19] INFO [ai_features:228] APIKeyManager: Rotated to key index 0
+[2026-02-08 11:34:20] INFO [ai_features:628] GeminiService: Reinitialized with next API key
+[2026-02-08 11:34:26] INFO [ai_features:615] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 11:34:26] INFO [ai_features:698] Extracted 3251 characters from mm.txt
+[2026-02-08 11:34:27] WARNING [ai_features:671] Rate limit on attempt 1, rotating key...
+[2026-02-08 11:34:27] INFO [ai_features:228] APIKeyManager: Rotated to key index 0
+[2026-02-08 11:34:28] INFO [ai_features:628] GeminiService: Reinitialized with next API key
+[2026-02-08 14:22:37] INFO [ai_features:233] HydraKeyManager: Loaded 1 fallback .env key(s)
+[2026-02-08 14:22:40] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-08 14:22:43] INFO [ai_features:728] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 14:22:43] INFO [ai_features:848] Extracted 3251 characters from mm.txt
+[2026-02-08 14:23:05] WARNING [ai_features:809] Rate limit on attempt 1, rotating key...
+[2026-02-08 14:23:05] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-08 14:23:07] INFO [ai_features:744] GeminiService: Reinitialized with next API key
+[2026-02-08 14:23:56] ERROR [ai_features:979] Question matrix generation failed: ⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.
+[2026-02-08 14:23:56] INFO [ai_features:489] AIFileStorage: Saved ai_generated\questions\questions_5_20260208_142356.md (279 chars)
+[2026-02-08 23:58:09] INFO [ai_features:233] HydraKeyManager: Loaded 1 fallback .env key(s)
+[2026-02-08 23:58:13] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-08 23:58:16] INFO [ai_features:728] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-08 23:58:16] INFO [ai_features:848] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-08 23:58:17] WARNING [ai_features:809] Rate limit on attempt 1, rotating key...
+[2026-02-08 23:58:17] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-08 23:58:19] INFO [ai_features:744] GeminiService: Reinitialized with next API key
+[2026-02-08 23:58:57] ERROR [ai_features:979] Question matrix generation failed: ⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.
+[2026-02-08 23:58:57] INFO [ai_features:489] AIFileStorage: Saved ai_generated\questions\questions_4_20260208_235857.md (278 chars)
+[2026-02-09 00:02:46] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-09 00:02:48] INFO [ai_features:728] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-09 00:02:48] INFO [ai_features:848] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-09 00:03:10] WARNING [ai_features:809] Rate limit on attempt 1, rotating key...
+[2026-02-09 00:03:10] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-09 00:03:13] INFO [ai_features:744] GeminiService: Reinitialized with next API key
+[2026-02-09 00:03:57] ERROR [ai_features:1059] Document Q&A failed: ⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.
+[2026-02-09 00:04:03] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-09 00:04:05] INFO [ai_features:728] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-09 00:04:05] INFO [ai_features:848] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-09 00:04:14] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-09 00:04:16] INFO [ai_features:728] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-09 00:04:16] INFO [ai_features:848] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-09 00:04:27] WARNING [ai_features:809] Rate limit on attempt 1, rotating key...
+[2026-02-09 00:04:27] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-09 00:04:29] INFO [ai_features:744] GeminiService: Reinitialized with next API key
+[2026-02-09 00:04:38] WARNING [ai_features:809] Rate limit on attempt 1, rotating key...
+[2026-02-09 00:04:38] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-09 00:04:40] INFO [ai_features:744] GeminiService: Reinitialized with next API key
+[2026-02-09 00:04:57] ERROR [ai_features:1059] Document Q&A failed: ⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.
+[2026-02-09 00:04:57] ERROR [ai_features:1059] Document Q&A failed: ⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.
+[2026-02-09 00:05:01] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-09 00:05:03] INFO [ai_features:728] GeminiService initialized with model: gemini-2.0-flash
+[2026-02-09 00:05:03] INFO [ai_features:848] Extracted 7024 characters from ROADMAP_IMPLEMENTATION.md
+[2026-02-09 00:05:25] WARNING [ai_features:809] Rate limit on attempt 1, rotating key...
+[2026-02-09 00:05:25] INFO [ai_features:281] HydraKeyManager: Using fallback .env key
+[2026-02-09 00:05:27] INFO [ai_features:744] GeminiService: Reinitialized with next API key
+[2026-02-09 00:05:57] ERROR [ai_features:1059] Document Q&A failed: ⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.

@@ -27,28 +27,28 @@ env/
 .venv/
 
 # Django
-*.log
-local_settings.py
+#*.log
+3local_settings.py
 #db.sqlite3
 *.pot
 *.pyc
 #----------------------------------------
 # Static and Media files
-staticfiles/
-media/uploads/*
-media/exports/*
-media/uploads/.gitkeep
-media/exports/.gitkeep
+#staticfiles/
+#media/uploads/*
+#media/exports/*
+#media/uploads/.gitkeep
+#media/exports/.gitkeep
 #----------------------------------------
 # Environment variables
-.env
-.env.local
-.env.production
-!.env.example
+#.env
+#.env.local#
+#.env.production
+#!.env.example
 
 # Logs
-logs/
-*.log
+#logs/
+#*.log
 
 # IDE
 .vscode/
