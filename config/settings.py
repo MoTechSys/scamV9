@@ -417,9 +417,24 @@ UNFOLD = {
                 ],
             },
             {
-                "title": "الذكاء الاصطناعي",
+                "title": "محرك الذكاء الاصطناعي",
                 "separator": True,
                 "items": [
+                    {
+                        "title": "لوحة مراقبة AI",
+                        "icon": "monitoring",
+                        "link": "/scam-admin/ai_features/apikey/ai-dashboard/",
+                    },
+                    {
+                        "title": "إعدادات AI",
+                        "icon": "tune",
+                        "link": reverse_lazy("admin:ai_features_aiconfiguration_changelist"),
+                    },
+                    {
+                        "title": "مفاتيح API",
+                        "icon": "vpn_key",
+                        "link": reverse_lazy("admin:ai_features_apikey_changelist"),
+                    },
                     {
                         "title": "الملخصات",
                         "icon": "summarize",
@@ -434,6 +449,11 @@ UNFOLD = {
                         "title": "المحادثات",
                         "icon": "chat",
                         "link": reverse_lazy("admin:ai_features_aichat_changelist"),
+                    },
+                    {
+                        "title": "سجل الاستخدام",
+                        "icon": "analytics",
+                        "link": reverse_lazy("admin:ai_features_aiusagelog_changelist"),
                     },
                 ],
             },

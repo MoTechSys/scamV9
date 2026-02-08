@@ -288,6 +288,11 @@ class LectureFile(models.Model):
             models.Index(fields=['course', 'file_type']),
             models.Index(fields=['upload_date']),
             models.Index(fields=['is_visible', 'is_deleted']),
+            # === Phase 1: Performance indexes for dashboard aggregation ===
+            models.Index(fields=['course', 'is_visible'], name='idx_lf_course_vis'),
+            models.Index(fields=['uploader', 'is_deleted'], name='idx_lf_uploader_del'),
+            models.Index(fields=['uploader', 'is_deleted', 'upload_date'], name='idx_lf_upload_stats'),
+            models.Index(fields=['course', 'is_visible', 'is_deleted'], name='idx_lf_crs_vis_del'),
         ]
     
     def __str__(self):

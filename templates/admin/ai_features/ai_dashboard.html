@@ -1,0 +1,187 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}لوحة مراقبة الذكاء الاصطناعي{% endblock %}
+
+{% block content %}
+<style>
+    .ai-dashboard { padding: 20px; direction: rtl; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); border-right: 4px solid; }
+    .stat-card.green { border-right-color: #10b981; }
+    .stat-card.blue { border-right-color: #3b82f6; }
+    .stat-card.yellow { border-right-color: #f59e0b; }
+    .stat-card.red { border-right-color: #ef4444; }
+    .stat-card.purple { border-right-color: #8b5cf6; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: #1f2937; }
+    .stat-label { font-size: 0.85rem; color: #6b7280; margin-top: 4px; }
+    .keys-section { margin-top: 24px; }
+    .keys-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .key-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); position: relative; }
+    .key-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .key-name { font-weight: 600; font-size: 1.1rem; }
+    .key-status { padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .key-status.active { background: #d1fae5; color: #065f46; }
+    .key-status.cooldown { background: #fef3c7; color: #92400e; }
+    .key-status.error { background: #fee2e2; color: #991b1b; }
+    .key-status.disabled { background: #f3f4f6; color: #6b7280; }
+    .key-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .key-stat { text-align: center; padding: 8px; background: #f9fafb; border-radius: 8px; }
+    .key-stat-value { font-weight: 600; font-size: 1.1rem; }
+    .key-stat-label { font-size: 0.7rem; color: #9ca3af; }
+    .test-btn { display: inline-block; margin-top: 12px; padding: 8px 16px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; text-decoration: none; }
+    .test-btn:hover { background: #2563eb; color: #fff; }
+    .config-section { margin-top: 24px; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+    .config-item { padding: 12px; background: #f9fafb; border-radius: 8px; }
+    .config-item-label { font-size: 0.8rem; color: #6b7280; }
+    .config-item-value { font-weight: 600; font-size: 1rem; margin-top: 4px; }
+    h2 { color: #1f2937; margin: 24px 0 16px; font-size: 1.3rem; }
+    .section-divider { border-top: 1px solid #e5e7eb; margin: 24px 0; }
+</style>
+
+<div class="ai-dashboard">
+    <h1>🧠 لوحة مراقبة الذكاء الاصطناعي</h1>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="stat-card green">
+            <div class="stat-value">{{ active_keys }}/{{ total_keys }}</div>
+            <div class="stat-label">مفاتيح نشطة</div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-value">{{ total_requests_today }}</div>
+            <div class="stat-label">طلبات اليوم</div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-value">{{ total_tokens_today|floatformat:0 }}</div>
+            <div class="stat-label">توكنات اليوم</div>
+        </div>
+        <div class="stat-card {% if failure_rate > 10 %}red{% elif failure_rate > 5 %}yellow{% else %}green{% endif %}">
+            <div class="stat-value">{{ failure_rate }}%</div>
+            <div class="stat-label">معدل الفشل</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-value">{{ success_count_today }}</div>
+            <div class="stat-label">نجاح</div>
+        </div>
+        <div class="stat-card red">
+            <div class="stat-value">{{ failure_count_today }}</div>
+            <div class="stat-label">فشل</div>
+        </div>
+    </div>
+
+    <!-- Current Configuration -->
+    {% if config %}
+    <div class="config-section">
+        <h2>⚙️ الإعدادات الحالية</h2>
+        <div class="config-grid">
+            <div class="config-item">
+                <div class="config-item-label">النموذج النشط</div>
+                <div class="config-item-value">{{ config.active_model }}</div>
+            </div>
+            <div class="config-item">
+                <div class="config-item-label">حجم التقطيع</div>
+                <div class="config-item-value">{{ config.chunk_size|floatformat:0 }} حرف</div>
+            </div>
+            <div class="config-item">
+                <div class="config-item-label">حد التوكنات</div>
+                <div class="config-item-value">{{ config.max_output_tokens }}</div>
+            </div>
+            <div class="config-item">
+                <div class="config-item-label">الإبداع</div>
+                <div class="config-item-value">{{ config.temperature }}</div>
+            </div>
+            <div class="config-item">
+                <div class="config-item-label">حد المستخدم/ساعة</div>
+                <div class="config-item-value">{{ config.user_rate_limit_per_hour }}</div>
+            </div>
+            <div class="config-item">
+                <div class="config-item-label">حالة الخدمة</div>
+                <div class="config-item-value">
+                    {% if config.is_service_enabled %}🟢 مفعلة{% else %}🔴 معطلة{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section-divider"></div>
+
+    <!-- Keys Health -->
+    <div class="keys-section">
+        <h2>🔑 صحة المفاتيح ({{ total_keys }} مفتاح)</h2>
+        <div class="keys-grid">
+            {% for key in key_health %}
+            <div class="key-card">
+                <div class="key-header">
+                    <span class="key-name">{{ key.label }}</span>
+                    <span class="key-status {{ key.status }}">{{ key.status|upper }}</span>
+                </div>
+                <div style="font-size: 0.85rem; color: #6b7280;">...{{ key.hint }}</div>
+                <div class="key-stats">
+                    <div class="key-stat">
+                        <div class="key-stat-value">{{ key.total_requests }}</div>
+                        <div class="key-stat-label">طلبات</div>
+                    </div>
+                    <div class="key-stat">
+                        <div class="key-stat-value">{{ key.last_latency_ms }} ms</div>
+                        <div class="key-stat-label">زمن استجابة</div>
+                    </div>
+                    <div class="key-stat">
+                        <div class="key-stat-value">{{ key.error_count }}</div>
+                        <div class="key-stat-label">أخطاء</div>
+                    </div>
+                    <div class="key-stat">
+                        <div class="key-stat-value">{{ key.rpm_limit }}</div>
+                        <div class="key-stat-label">RPM</div>
+                    </div>
+                </div>
+                {% if key.last_error %}
+                <div style="margin-top: 8px; padding: 8px; background: #fef2f2; border-radius: 6px; font-size: 0.75rem; color: #991b1b;">
+                    {{ key.last_error|truncatechars:100 }}
+                </div>
+                {% endif %}
+                <a href="{% url 'admin:ai_test_key' key.id %}" class="test-btn"
+                   onclick="testKey(event, this, {{ key.id }})">🔍 اختبار</a>
+            </div>
+            {% empty %}
+            <div style="padding: 40px; text-align: center; color: #6b7280;">
+                <p>لا توجد مفاتيح API مسجلة.</p>
+                <a href="{% url 'admin:ai_features_apikey_add' %}" class="test-btn">➕ إضافة مفتاح</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function testKey(event, element, keyId) {
+    event.preventDefault();
+    element.textContent = '⏳ جاري الاختبار...';
+    element.style.background = '#6b7280';
+
+    fetch('/scam-admin/ai_features/apikey/test-key/' + keyId + '/', {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            element.textContent = '✅ نجح (' + data.latency_ms + 'ms)';
+            element.style.background = '#10b981';
+        } else {
+            element.textContent = '❌ فشل: ' + (data.error || '').substring(0, 50);
+            element.style.background = '#ef4444';
+        }
+        setTimeout(() => {
+            element.textContent = '🔍 اختبار';
+            element.style.background = '#3b82f6';
+        }, 5000);
+    })
+    .catch(() => {
+        element.textContent = '❌ خطأ في الاتصال';
+        element.style.background = '#ef4444';
+    });
+}
+</script>
+{% endblock %}
