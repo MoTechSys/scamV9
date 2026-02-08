@@ -20,6 +20,7 @@ urlpatterns = [
     # Instructor Notifications
     path('instructor/create/', views.InstructorNotificationCreateView.as_view(), name='instructor_create'),
     path('instructor/', views.InstructorNotificationListView.as_view(), name='instructor_list'),
+    path('instructor/sent/', views.InstructorNotificationListView.as_view(), name='instructor_sent'),
     
     # Admin Notifications
     path('admin/create/', views.AdminNotificationCreateView.as_view(), name='admin_create'),

@@ -30,6 +30,11 @@ class InstructorNotificationCreateView(LoginRequiredMixin, InstructorRequiredMix
     form_class = CourseNotificationForm
     template_name = 'instructor_panel/notifications/create.html'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'notifications'
+        return context
+    
     def get_form_kwargs(self):
         """تمرير المستخدم للـ Form لتحديد المقررات المتاحة."""
         kwargs = super().get_form_kwargs()
@@ -62,6 +67,11 @@ class InstructorNotificationListView(LoginRequiredMixin, InstructorRequiredMixin
     template_name = 'instructor_panel/notifications/list.html'
     context_object_name = 'notifications'
     paginate_by = 20
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'notifications'
+        return context
     
     def get_queryset(self):
         """جلب الإشعارات المرسلة من المدرس الحالي."""

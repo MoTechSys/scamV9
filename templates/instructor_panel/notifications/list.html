@@ -1,88 +1,73 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends 'instructor_panel/base_instructor.html' %}
 
-{% block title %}الإشعارات المرسلة - S-ACM{% endblock %}
+{% block title %}الإشعارات المرسلة{% endblock %}
+{% block page_title %}إدارة الإشعارات{% endblock %}
+
+{% block page_tabs %}
+<div class="page-tabs">
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a href="{% url 'notifications:instructor_create' %}" class="nav-link">إرسال إشعار</a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'notifications:instructor_sent' %}" class="nav-link active">المرسلة</a>
+        </li>
+    </ul>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-bell me-2"></i>الإشعارات المرسلة</h2>
-    <a href="{% url 'notifications:instructor_create' %}" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>إرسال إشعار جديد
-    </a>
-</div>
-
-<!-- Notifications Table -->
-<div class="card">
+<div class="data-card">
+    <div class="card-header">
+        <h3><i class="bi bi-send me-2"></i>الإشعارات المرسلة</h3>
+        <a href="{% url 'notifications:instructor_create' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus me-1"></i>إشعار جديد
+        </a>
+    </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>العنوان</th>
-                        <th>المقرر</th>
-                        <th>المستلمين</th>
-                        <th>تاريخ الإرسال</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for notification in notifications %}
-                    <tr>
-                        <td>{{ notification.pk }}</td>
-                        <td>
-                            <strong>{{ notification.title }}</strong>
-                            <br>
-                            <small class="text-muted">{{ notification.body|truncatewords:10 }}</small>
-                        </td>
-                        <td>
-                            {% if notification.related_course %}
-                            <span class="badge bg-primary">{{ notification.related_course.course_code }}</span>
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge bg-info">{{ notification.recipients.count }}</span>
-                        </td>
-                        <td>{{ notification.created_at|date:"Y/m/d H:i" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">
-                            <i class="bi bi-bell-slash display-4 d-block mb-2"></i>
-                            لم ترسل أي إشعارات بعد
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    {% if notifications.has_other_pages %}
-    <div class="card-footer">
-        <nav>
-            <ul class="pagination justify-content-center mb-0">
-                {% if notifications.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ notifications.previous_page_number }}">السابق</a>
-                </li>
-                {% endif %}
-                
-                {% for num in notifications.paginator.page_range %}
-                <li class="page-item {% if notifications.number == num %}active{% endif %}">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                </li>
+        {% if notifications %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>العنوان</th>
+                    <th>المقرر</th>
+                    <th>المستلمين</th>
+                    <th>القراءة</th>
+                    <th>التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for notification in notifications %}
+                <tr>
+                    <td>
+                        <div class="fw-medium">{{ notification.title }}</div>
+                        <small class="text-muted">{{ notification.body|truncatewords:10 }}</small>
+                    </td>
+                    <td>
+                        {% if notification.course %}
+                        {{ notification.course.course_code }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ notification.get_recipients_count }}</td>
+                    <td>
+                        <span class="badge bg-success">{{ notification.get_read_count }}</span>
+                    </td>
+                    <td>{{ notification.created_at|date:"Y/m/d H:i" }}</td>
+                </tr>
                 {% endfor %}
-                
-                {% if notifications.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ notifications.next_page_number }}">التالي</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-bell-slash"></i>
+            <p>لم ترسل أي إشعارات بعد</p>
+            <a href="{% url 'notifications:instructor_create' %}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus me-1"></i>إرسال أول إشعار
+            </a>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 {% endblock %}

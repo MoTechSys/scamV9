@@ -73,7 +73,12 @@ class InstructorCourseListView(LoginRequiredMixin, InstructorRequiredMixin, List
     context_object_name = 'courses'
     
     def get_queryset(self):
-        return Course.objects.get_courses_for_instructor(self.request.user)
+        return Course.objects.get_courses_for_instructor(self.request.user).prefetch_related('files').select_related('level')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'courses'
+        return context
 
 
 class InstructorCourseDetailView(LoginRequiredMixin, InstructorRequiredMixin, DetailView):
@@ -87,6 +92,7 @@ class InstructorCourseDetailView(LoginRequiredMixin, InstructorRequiredMixin, De
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['active_page'] = 'courses'
         course = self.object
         
         # جميع الملفات (بما فيها المخفية)
@@ -129,6 +135,7 @@ class FileUploadView(LoginRequiredMixin, InstructorRequiredMixin, CreateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['active_page'] = 'files'
         course_id = self.request.GET.get('course')
         if course_id:
             context['selected_course'] = get_object_or_404(Course, pk=course_id)
