@@ -1,0 +1,27 @@
+{% comment %}
+نتيجة الإجابة على السؤال - Partial Template
+{% endcomment %}
+
+<div class="answer-result card border-primary">
+    <div class="card-header bg-primary text-white">
+        <i class="bi bi-chat-dots me-2"></i>
+        إجابة من: {{ file.title }}
+    </div>
+    <div class="card-body">
+        <div class="question-asked mb-3 p-3 bg-light rounded">
+            <strong><i class="bi bi-question-circle me-2"></i>سؤالك:</strong>
+            <p class="mb-0 mt-1">{{ question }}</p>
+        </div>
+        
+        <div class="answer-content">
+            <strong><i class="bi bi-robot me-2"></i>الإجابة:</strong>
+            <div class="mt-2" style="white-space: pre-wrap; line-height: 1.8;">
+                {{ answer }}
+            </div>
+        </div>
+    </div>
+    <div class="card-footer text-muted small">
+        <i class="bi bi-info-circle me-1"></i>
+        الإجابة مبنية على محتوى المستند فقط
+    </div>
+</div>

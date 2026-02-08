@@ -1,0 +1,41 @@
+[
+    {
+        "model": "accounts.role",
+        "pk": 1,
+        "fields": {
+            "code": "admin",
+            "display_name": "مدير النظام",
+            "description": "مسؤول النظام - صلاحيات كاملة",
+            "is_system": true,
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.role",
+        "pk": 2,
+        "fields": {
+            "code": "instructor",
+            "display_name": "مدرس",
+            "description": "مدرس - إدارة المقررات والملفات",
+            "is_system": true,
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.role",
+        "pk": 3,
+        "fields": {
+            "code": "student",
+            "display_name": "طالب",
+            "description": "طالب - الوصول للمحتوى الأكاديمي",
+            "is_system": true,
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z"
+        }
+    }
+]

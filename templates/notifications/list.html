@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}الإشعارات - S-ACM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-bell me-2"></i>الإشعارات</h2>
+    {% if notifications %}
+    <form method="post" action="{% url 'notifications:mark_all_read' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-check-all me-1"></i>تحديد الكل كمقروء
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% for notification in notifications %}
+        <div class="notification-item p-3 border-bottom {% if not notification.is_read %}bg-light{% endif %}" data-notification-id="{{ notification.pk }}">
+            <div class="d-flex">
+                <div class="notification-icon me-3">
+                    {% if notification.notification_type == 'info' %}
+                    <i class="bi bi-info-circle text-info fs-4"></i>
+                    {% elif notification.notification_type == 'warning' %}
+                    <i class="bi bi-exclamation-triangle text-warning fs-4"></i>
+                    {% elif notification.notification_type == 'success' %}
+                    <i class="bi bi-check-circle text-success fs-4"></i>
+                    {% elif notification.notification_type == 'new_file' %}
+                    <i class="bi bi-file-earmark-plus text-primary fs-4"></i>
+                    {% else %}
+                    <i class="bi bi-bell text-secondary fs-4"></i>
+                    {% endif %}
+                </div>
+                <div class="notification-content flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6 class="mb-1 {% if not notification.is_read %}fw-bold{% endif %}">
+                            {{ notification.title }}
+                        </h6>
+                        <small class="text-muted">{{ notification.created_at|timesince }} مضت</small>
+                    </div>
+                    <p class="mb-1 text-muted">{{ notification.body }}</p>
+                    {% if notification.related_course %}
+                    <small class="text-primary">
+                        <i class="bi bi-book me-1"></i>{{ notification.related_course.course_name }}
+                    </small>
+                    {% endif %}
+                </div>
+                <div class="notification-actions ms-2">
+                    {% if not notification.is_read %}
+                    <form method="post" action="{% url 'notifications:mark_read' notification.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-success" title="تحديد كمقروء">
+                            <i class="bi bi-check"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form method="post" action="{% url 'notifications:delete' notification.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف" data-confirm="هل تريد حذف هذا الإشعار؟">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <i class="bi bi-bell-slash display-1 text-muted"></i>
+            <h4 class="mt-3 text-muted">لا توجد إشعارات</h4>
+            <p class="text-muted">ستظهر هنا الإشعارات الجديدة</p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if notifications.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if notifications.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ notifications.previous_page_number }}">السابق</a>
+                </li>
+                {% endif %}
+                
+                {% for num in notifications.paginator.page_range %}
+                <li class="page-item {% if notifications.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if notifications.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ notifications.next_page_number }}">التالي</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

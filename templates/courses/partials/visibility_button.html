@@ -1,0 +1,11 @@
+{% comment %}
+زر تبديل ظهور الملف - Partial Template
+يُرجع من htmx_toggle_visibility لتحديث الزر فقط
+{% endcomment %}
+
+<button hx-post="{% url 'courses:htmx_toggle_visibility' file.id %}"
+        hx-swap="outerHTML"
+        class="btn btn-sm btn-outline-{{ is_visible|yesno:'warning,success' }} me-1"
+        title="{{ is_visible|yesno:'إخفاء,إظهار' }}">
+    <i class="bi bi-eye{{ is_visible|yesno:'-slash,' }}"></i>
+</button>

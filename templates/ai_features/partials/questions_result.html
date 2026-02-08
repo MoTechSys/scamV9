@@ -1,0 +1,79 @@
+{% comment %}
+نتيجة توليد الأسئلة - Partial Template
+{% endcomment %}
+
+<div class="questions-result">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+            <i class="bi bi-question-circle me-2"></i>
+            أسئلة من: {{ file.title }}
+        </h5>
+        <span class="badge bg-primary">{{ questions|length }} سؤال</span>
+    </div>
+    
+    <div class="accordion" id="questionsAccordion">
+        {% for q in questions %}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#question-{{ forloop.counter }}">
+                    <span class="badge bg-{{ q.type|default:'secondary' }} me-2">
+                        {% if q.type == 'mcq' %}اختيار متعدد{% endif %}
+                        {% if q.type == 'true_false' %}صح/خطأ{% endif %}
+                        {% if q.type == 'short_answer' %}إجابة قصيرة{% endif %}
+                    </span>
+                    {{ q.question }}
+                </button>
+            </h2>
+            <div id="question-{{ forloop.counter }}" 
+                 class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                 data-bs-parent="#questionsAccordion">
+                <div class="accordion-body">
+                    {% if q.options %}
+                    <div class="options mb-3">
+                        {% for option in q.options %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" 
+                                   name="q{{ forloop.parentloop.counter }}" 
+                                   id="q{{ forloop.parentloop.counter }}_{{ forloop.counter }}"
+                                   {% if option == q.answer %}data-correct="true"{% endif %}>
+                            <label class="form-check-label" 
+                                   for="q{{ forloop.parentloop.counter }}_{{ forloop.counter }}">
+                                {{ option }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="answer-section">
+                        <button class="btn btn-sm btn-outline-success show-answer-btn" 
+                                onclick="this.nextElementSibling.style.display='block'; this.style.display='none';">
+                            <i class="bi bi-eye me-1"></i>عرض الإجابة
+                        </button>
+                        <div class="answer-content mt-2" style="display: none;">
+                            <div class="alert alert-success mb-2">
+                                <strong><i class="bi bi-check-circle me-1"></i>الإجابة:</strong>
+                                {{ q.answer }}
+                            </div>
+                            {% if q.explanation %}
+                            <div class="alert alert-info mb-0">
+                                <strong><i class="bi bi-info-circle me-1"></i>الشرح:</strong>
+                                {{ q.explanation }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="text-muted small mt-3">
+        <i class="bi bi-robot me-1"></i>
+        تم التوليد بواسطة الذكاء الاصطناعي
+    </div>
+</div>

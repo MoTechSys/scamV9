@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}اسأل المستند - S-ACM{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'courses:student_dashboard' %}">لوحة التحكم</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'courses:student_course_detail' file.course.pk %}">{{ file.course.course_code }}</a></li>
+        <li class="breadcrumb-item active">اسأل المستند</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-chat-dots me-2"></i>اسأل المستند</span>
+                <span class="badge bg-info">
+                    <i class="bi bi-robot me-1"></i>ذكاء اصطناعي
+                </span>
+            </div>
+            <div class="card-body">
+                <!-- File Info -->
+                <div class="alert alert-light">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-file-earmark fs-3 me-3"></i>
+                        <div>
+                            <h6 class="mb-1">{{ file.title }}</h6>
+                            <small class="text-muted">{{ file.course.course_name }}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat Container -->
+                <div class="ai-chat-container border rounded p-3 mb-3" id="chat-messages" style="min-height: 300px; max-height: 400px; overflow-y: auto;">
+                    {% for chat in chat_history %}
+                    <div class="chat-message user">
+                        <p class="mb-1">{{ chat.question }}</p>
+                        <small class="message-time">{{ chat.created_at|date:"H:i" }}</small>
+                    </div>
+                    <div class="chat-message ai">
+                        <p class="mb-1">{{ chat.answer }}</p>
+                        <small class="message-time">{{ chat.created_at|date:"H:i" }}</small>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5 text-muted" id="empty-chat">
+                        <i class="bi bi-chat-dots display-4"></i>
+                        <p class="mt-2">اطرح سؤالاً عن محتوى الملف</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Input Form -->
+                <form method="post" id="chat-form">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <input type="text" name="question" id="chat-input" class="form-control" placeholder="اكتب سؤالك هنا..." required {% if remaining_requests == 0 %}disabled{% endif %}>
+                        <button type="submit" class="btn btn-primary" {% if remaining_requests == 0 %}disabled{% endif %}>
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted">
+                        الطلبات المتبقية: {{ remaining_requests }}
+                    </small>
+                    {% if chat_history %}
+                    <form method="post" action="{% url 'ai_features:clear_chat' file.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash me-1"></i>مسح المحادثة
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                
+                {% if remaining_requests == 0 %}
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    لقد استنفدت الحد المسموح من الطلبات. حاول بعد ساعة.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-lightbulb me-2"></i>أمثلة على الأسئلة
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <a href="#" class="text-decoration-none example-question">
+                            <i class="bi bi-chat-quote me-1"></i>ما هي الفكرة الرئيسية؟
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="text-decoration-none example-question">
+                            <i class="bi bi-chat-quote me-1"></i>اشرح المفهوم الأساسي
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="text-decoration-none example-question">
+                            <i class="bi bi-chat-quote me-1"></i>ما هي النقاط المهمة؟
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="text-decoration-none example-question">
+                            <i class="bi bi-chat-quote me-1"></i>لخص هذا الجزء
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-lightning me-2"></i>ميزات أخرى
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'ai_features:summarize' file.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-file-text me-2"></i>تلخيص الملف
+                    </a>
+                    <a href="{% url 'ai_features:questions' file.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-question-circle me-2"></i>توليد أسئلة
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Example questions click handler
+document.querySelectorAll('.example-question').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('chat-input').value = this.textContent.trim();
+        document.getElementById('chat-input').focus();
+    });
+});
+
+// AJAX form submission
+document.getElementById('chat-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    sendChatMessage({{ file.pk }});
+});
+
+// Scroll to bottom on load
+const chatContainer = document.getElementById('chat-messages');
+chatContainer.scrollTop = chatContainer.scrollHeight;
+</script>
+{% endblock %}

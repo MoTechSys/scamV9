@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load permissions %}
+
+{#
+Dashboard Base Layout
+S-ACM - Smart Academic Content Management System
+
+Layout يستخدم الـ Sidebar الديناميكي للوحات التحكم
+Usage: Extend this template in your dashboard pages
+#}
+
+{% block extra_css %}
+{{ block.super }}
+<link href="{% static 'css/sidebar.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block navbar %}
+{# إلغاء الـ Navbar الافتراضي واستخدام الـ Sidebar #}
+{% endblock %}
+
+{% block main_class %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+    {# Sidebar Component #}
+    {% include 'components/sidebar.html' %}
+
+    {# Main Content Area #}
+    <div class="dashboard-content">
+        {# Top Navbar #}
+        <header class="dashboard-navbar">
+            {# Mobile Menu Toggle #}
+            <button class="btn btn-link navbar-mobile-toggle" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#mobileSidebar" aria-controls="mobileSidebar">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+
+            {# Page Title #}
+            <h5 class="mb-0 d-none d-md-block">{% block page_title %}لوحة التحكم{% endblock %}</h5>
+
+            {# Right Side Actions #}
+            <div class="d-flex align-items-center gap-3">
+                {# Notifications #}
+                <div class="dropdown">
+                    <a class="btn btn-link position-relative text-dark" href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-bell fs-5"></i>
+                        {% if unread_notifications_count %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ unread_notifications_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+                        <li>
+                            <h6 class="dropdown-header">الإشعارات</h6>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        {% for notification in recent_notifications|slice:":5" %}
+                        <li>
+                            <a class="dropdown-item {% if not notification.is_read %}bg-light{% endif %}" href="#">
+                                <small class="text-muted">{{ notification.created_at|timesince }}</small>
+                                <div>{{ notification.title|truncatechars:40 }}</div>
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li>
+                            <p class="text-muted text-center py-3 mb-0">لا توجد إشعارات</p>
+                        </li>
+                        {% endfor %}
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-center" href="{% url 'notifications:list' %}">عرض الكل</a></li>
+                    </ul>
+                </div>
+
+                {# User Menu #}
+                <div class="dropdown">
+                    <a class="btn btn-link text-dark d-flex align-items-center gap-2" href="#"
+                        data-bs-toggle="dropdown">
+                        <div class="avatar-circle bg-primary text-white"
+                            style="width: 32px; height: 32px; font-size: 0.8rem;">
+                            {{ request.user.full_name|slice:":1"|upper }}
+                        </div>
+                        <span class="d-none d-lg-inline">{{ request.user.full_name|truncatechars:15 }}</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <div class="dropdown-header">
+                                <strong>{{ request.user.full_name }}</strong>
+                                <br><small class="text-muted">{{ user_role }}</small>
+                            </div>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                                <i class="bi bi-person me-2"></i>الملف الشخصي
+                            </a></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:change_password' %}">
+                                <i class="bi bi-key me-2"></i>تغيير كلمة المرور
+                            </a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
+                                <i class="bi bi-box-arrow-right me-2"></i>تسجيل الخروج
+                            </a></li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        {# Messages #}
+        {% if messages %}
+        <div class="px-4 pt-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# Page Content #}
+        <main class="flex-grow-1 p-4" id="main-content">
+            {% block dashboard_content %}{% endblock %}
+        </main>
+
+        {# Footer #}
+        <footer class="dashboard-footer text-center py-3 border-top bg-light">
+            <small class="text-muted">© 2024 S-ACM - نظام إدارة المحتوى الأكاديمي الذكي</small>
+        </footer>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+{# Footer included in dashboard layout #}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'js/sidebar.js' %}"></script>
+{% endblock %}

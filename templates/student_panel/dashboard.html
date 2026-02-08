@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}لوحة التحكم - S-ACM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>مرحباً، {{ user.full_name }}</h2>
+        <p class="text-muted mb-0">
+            <i class="bi bi-mortarboard me-1"></i>{{ user.major.major_name|default:"غير محدد" }} - 
+            {{ user.level.level_name|default:"غير محدد" }}
+        </p>
+    </div>
+    <span class="badge bg-success fs-6">طالب</span>
+</div>
+
+<!-- Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ current_courses|length }}</div>
+                    <div class="stat-label">المقررات الحالية</div>
+                </div>
+                <i class="bi bi-book stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ archived_courses|length }}</div>
+                    <div class="stat-label">المقررات المؤرشفة</div>
+                </div>
+                <i class="bi bi-archive stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ unread_notifications }}</div>
+                    <div class="stat-label">إشعارات جديدة</div>
+                </div>
+                <i class="bi bi-bell stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Current Courses -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-book me-2"></i>مقرراتي الحالية</span>
+                <a href="{% url 'courses:student_course_list' %}" class="btn btn-sm btn-outline-primary">
+                    عرض الكل
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for course in current_courses %}
+                    <div class="col-md-6">
+                        <div class="card course-card h-100 hover-shadow">
+                            <div class="card-body">
+                                <span class="course-code">{{ course.course_code }}</span>
+                                <h5 class="course-name">{{ course.course_name }}</h5>
+                                <p class="course-meta mb-0">
+                                    <i class="bi bi-layers me-1"></i>{{ course.level.level_name }}
+                                </p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="{% url 'courses:student_course_detail' course.pk %}" class="btn btn-primary btn-sm w-100">
+                                    <i class="bi bi-folder-open me-1"></i>فتح المقرر
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center py-4">
+                        <i class="bi bi-inbox display-4 text-muted"></i>
+                        <p class="text-muted mt-2">لا توجد مقررات حالية</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Files -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-file-earmark-text me-2"></i>آخر الملفات
+            </div>
+            <div class="card-body p-0">
+                {% for file in recent_files %}
+                <div class="file-item">
+                    <div class="file-icon {% if file.local_file %}{% if '.pdf' in file.local_file.name %}pdf{% elif '.doc' in file.local_file.name %}doc{% elif '.ppt' in file.local_file.name %}ppt{% else %}other{% endif %}{% else %}other{% endif %}">
+                        <i class="bi bi-file-earmark"></i>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-title text-truncate">{{ file.title }}</div>
+                        <div class="file-meta">
+                            {{ file.course.course_code }} • {{ file.upload_date|date:"m/d" }}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-file-earmark-x display-4"></i>
+                    <p class="mt-2">لا توجد ملفات حديثة</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Features Promo -->
+<div class="card mt-4 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="card-body text-white">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4><i class="bi bi-robot me-2"></i>ميزات الذكاء الاصطناعي</h4>
+                <p class="mb-0">استخدم الذكاء الاصطناعي لتلخيص المحاضرات، توليد أسئلة اختبارية، والحصول على إجابات فورية من محتوى الملفات.</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="{% url 'ai_features:usage_stats' %}" class="btn btn-light">
+                    <i class="bi bi-bar-chart me-1"></i>إحصائيات الاستخدام
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

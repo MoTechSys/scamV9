@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}لوحة التحكم - S-ACM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>مرحباً، {{ user.full_name }}</h2>
+        <p class="text-muted mb-0">
+            <i class="bi bi-person-workspace me-1"></i>عضو هيئة تدريس
+        </p>
+    </div>
+    <span class="badge bg-info fs-6">مدرس</span>
+</div>
+
+<!-- Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ my_courses|length }}</div>
+                    <div class="stat-label">المقررات المعينة</div>
+                </div>
+                <i class="bi bi-book stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ total_files }}</div>
+                    <div class="stat-label">الملفات المرفوعة</div>
+                </div>
+                <i class="bi bi-file-earmark stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ total_downloads }}</div>
+                    <div class="stat-label">إجمالي التحميلات</div>
+                </div>
+                <i class="bi bi-download stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- My Courses -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-book me-2"></i>مقرراتي</span>
+                <a href="{% url 'courses:instructor_course_list' %}" class="btn btn-sm btn-outline-primary">
+                    عرض الكل
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for course in my_courses %}
+                    <div class="col-md-6">
+                        <div class="card course-card h-100 hover-shadow">
+                            <div class="card-body">
+                                <span class="course-code">{{ course.course_code }}</span>
+                                <h5 class="course-name">{{ course.course_name }}</h5>
+                                <p class="course-meta mb-0">
+                                    <i class="bi bi-layers me-1"></i>{{ course.level.level_name }} •
+                                    <i class="bi bi-file-earmark me-1"></i>{{ course.files.all|length }} ملف
+                                </p>
+                            </div>
+                            <div class="card-footer d-flex gap-2">
+                                <a href="{% url 'courses:instructor_course_detail' course.pk %}" class="btn btn-primary btn-sm flex-fill">
+                                    <i class="bi bi-folder-open me-1"></i>إدارة
+                                </a>
+                                <a href="{% url 'courses:file_upload' %}?course={{ course.pk }}" class="btn btn-success btn-sm">
+                                    <i class="bi bi-upload"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center py-4">
+                        <i class="bi bi-inbox display-4 text-muted"></i>
+                        <p class="text-muted mt-2">لم يتم تعيين مقررات لك بعد</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions & Recent Uploads -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-lightning me-2"></i>إجراءات سريعة
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'courses:file_upload' %}" class="btn btn-primary">
+                        <i class="bi bi-upload me-2"></i>رفع ملف جديد
+                    </a>
+                    <a href="{% url 'notifications:instructor_create' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-bell me-2"></i>إرسال إشعار
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Uploads -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-2"></i>آخر الرفع
+            </div>
+            <div class="card-body p-0">
+                {% for file in recent_uploads %}
+                <div class="file-item">
+                    <div class="file-icon {% if file.local_file %}{% if '.pdf' in file.local_file.name %}pdf{% elif '.doc' in file.local_file.name %}doc{% elif '.ppt' in file.local_file.name %}ppt{% else %}other{% endif %}{% else %}other{% endif %}">
+                        <i class="bi bi-file-earmark"></i>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-title text-truncate">{{ file.title }}</div>
+                        <div class="file-meta">
+                            {{ file.course.course_code }} • {{ file.upload_date|date:"m/d" }}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-file-earmark-x display-4"></i>
+                    <p class="mt-2">لم ترفع أي ملفات بعد</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

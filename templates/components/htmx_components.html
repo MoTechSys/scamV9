@@ -1,0 +1,224 @@
+{% comment %}
+HTMX Components - مكونات HTMX قابلة لإعادة الاستخدام
+S-ACM - Smart Academic Content Management System
+
+هذا الملف يحتوي على مكونات HTMX جاهزة للاستخدام في القوالب المختلفة
+يتم تضمينها باستخدام {% include 'components/htmx_components.html' %}
+{% endcomment %}
+
+{% comment %}
+=== Loading Spinner Component ===
+استخدام: {% include 'components/htmx_components.html' with component='spinner' %}
+{% endcomment %}
+{% if component == 'spinner' %}
+<div class="htmx-indicator d-flex justify-content-center align-items-center p-4">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">جاري التحميل...</span>
+    </div>
+    <span class="ms-2 text-muted">جاري التحميل...</span>
+</div>
+{% endif %}
+
+{% comment %}
+=== Skeleton Loader Component ===
+استخدام: {% include 'components/htmx_components.html' with component='skeleton' lines=3 %}
+{% endcomment %}
+{% if component == 'skeleton' %}
+<div class="skeleton-loader">
+    {% for i in lines|default:"3"|make_list %}
+    <div class="skeleton-line mb-2" style="height: 1rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite;"></div>
+    {% endfor %}
+</div>
+<style>
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+</style>
+{% endif %}
+
+{% comment %}
+=== Toast Notification Component ===
+استخدام: {% include 'components/htmx_components.html' with component='toast' message='تم الحفظ بنجاح' type='success' %}
+{% endcomment %}
+{% if component == 'toast' %}
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="3000">
+        <div class="toast-header bg-{{ type|default:'info' }} text-white">
+            <strong class="me-auto">
+                {% if type == 'success' %}<i class="bi bi-check-circle me-1"></i>{% endif %}
+                {% if type == 'error' %}<i class="bi bi-x-circle me-1"></i>{% endif %}
+                {% if type == 'warning' %}<i class="bi bi-exclamation-triangle me-1"></i>{% endif %}
+                {% if type == 'info' %}<i class="bi bi-info-circle me-1"></i>{% endif %}
+                إشعار
+            </strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            {{ message }}
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var toastEl = document.querySelector('.toast');
+    if (toastEl) {
+        var toast = new bootstrap.Toast(toastEl);
+        toast.show();
+    }
+});
+</script>
+{% endif %}
+
+{% comment %}
+=== Infinite Scroll Trigger ===
+استخدام: {% include 'components/htmx_components.html' with component='infinite_scroll' url='/api/items/' target='#items-list' %}
+{% endcomment %}
+{% if component == 'infinite_scroll' %}
+<div hx-get="{{ url }}"
+     hx-trigger="revealed"
+     hx-swap="afterend"
+     hx-indicator=".htmx-indicator"
+     class="text-center py-3">
+    <div class="htmx-indicator">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">جاري تحميل المزيد...</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %}
+=== Search with Debounce ===
+استخدام: {% include 'components/htmx_components.html' with component='search' url='/api/search/' target='#results' %}
+{% endcomment %}
+{% if component == 'search' %}
+<div class="search-component">
+    <div class="input-group">
+        <span class="input-group-text bg-white border-end-0">
+            <i class="bi bi-search text-muted"></i>
+        </span>
+        <input type="search" 
+               class="form-control border-start-0" 
+               name="q" 
+               placeholder="{{ placeholder|default:'بحث...' }}"
+               hx-get="{{ url }}"
+               hx-trigger="keyup changed delay:300ms, search"
+               hx-target="{{ target }}"
+               hx-indicator=".search-indicator"
+               autocomplete="off">
+        <span class="input-group-text bg-white search-indicator" style="display: none;">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">جاري البحث...</span>
+            </div>
+        </span>
+    </div>
+</div>
+{% endif %}
+
+{% comment %}
+=== Confirm Delete Modal ===
+استخدام: {% include 'components/htmx_components.html' with component='confirm_delete' %}
+{% endcomment %}
+{% if component == 'confirm_delete' %}
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle me-2"></i>تأكيد الحذف
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">هل أنت متأكد من حذف هذا العنصر؟</p>
+                <p class="text-muted small mb-0">لا يمكن التراجع عن هذا الإجراء.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="bi bi-trash me-1"></i>حذف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% comment %}
+=== File Upload with Progress ===
+استخدام: {% include 'components/htmx_components.html' with component='file_upload' url='/api/upload/' %}
+{% endcomment %}
+{% if component == 'file_upload' %}
+<div class="file-upload-component">
+    <div class="upload-area border border-2 border-dashed rounded p-4 text-center"
+         ondragover="this.classList.add('border-primary', 'bg-light')"
+         ondragleave="this.classList.remove('border-primary', 'bg-light')"
+         ondrop="this.classList.remove('border-primary', 'bg-light')">
+        <i class="bi bi-cloud-upload display-4 text-muted"></i>
+        <p class="mb-2">اسحب الملفات هنا أو</p>
+        <label class="btn btn-primary">
+            <i class="bi bi-folder2-open me-1"></i>اختر ملفاً
+            <input type="file" 
+                   name="file" 
+                   class="d-none"
+                   hx-post="{{ url }}"
+                   hx-encoding="multipart/form-data"
+                   hx-target="{{ target|default:'#upload-result' }}"
+                   hx-indicator=".upload-indicator">
+        </label>
+    </div>
+    <div class="upload-indicator mt-3" style="display: none;">
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" 
+                 style="width: 100%">
+                جاري الرفع...
+            </div>
+        </div>
+    </div>
+    <div id="upload-result"></div>
+</div>
+{% endif %}
+
+{% comment %}
+=== Polling Component ===
+استخدام: {% include 'components/htmx_components.html' with component='polling' url='/api/status/' interval='5s' %}
+{% endcomment %}
+{% if component == 'polling' %}
+<div hx-get="{{ url }}"
+     hx-trigger="every {{ interval|default:'5s' }}"
+     hx-swap="innerHTML"
+     class="polling-component">
+    <!-- المحتوى سيتم تحديثه تلقائياً -->
+</div>
+{% endif %}
+
+{% comment %}
+=== Tabs with HTMX ===
+استخدام: {% include 'components/htmx_components.html' with component='tabs' %}
+{% endcomment %}
+{% if component == 'tabs' %}
+<ul class="nav nav-tabs" role="tablist">
+    {% for tab in tabs %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if forloop.first %}active{% endif %}"
+                hx-get="{{ tab.url }}"
+                hx-target="#tab-content"
+                hx-swap="innerHTML"
+                hx-indicator=".tab-indicator">
+            {% if tab.icon %}<i class="bi bi-{{ tab.icon }} me-1"></i>{% endif %}
+            {{ tab.title }}
+        </button>
+    </li>
+    {% endfor %}
+</ul>
+<div class="tab-indicator text-center py-3" style="display: none;">
+    <div class="spinner-border spinner-border-sm text-primary" role="status">
+        <span class="visually-hidden">جاري التحميل...</span>
+    </div>
+</div>
+<div id="tab-content" class="tab-content p-3 border border-top-0 rounded-bottom">
+    <!-- محتوى التبويب -->
+</div>
+{% endif %}

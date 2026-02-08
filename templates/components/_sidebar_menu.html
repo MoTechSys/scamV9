@@ -1,0 +1,56 @@
+{% load permissions %}
+
+<ul class="nav flex-column sidebar-menu">
+    {% for item in menu_items %}
+    {# Skip separators with no visible children #}
+    {% if 'separator' in item.code %}
+    <li class="nav-item sidebar-separator">
+        <span class="separator-text">{{ item.label|slice:"4:-4" }}</span>
+    </li>
+    {% elif item.children %}
+    {# Parent with children - Collapsible #}
+    <li class="nav-item has-submenu">
+        <a class="nav-link sidebar-link" data-bs-toggle="collapse" href="#submenu-{{ item.code }}" role="button"
+            aria-expanded="false">
+            <i class="bi {{ item.icon }} link-icon"></i>
+            <span class="link-text">{{ item.label }}</span>
+            <i class="bi bi-chevron-down submenu-arrow"></i>
+        </a>
+        <div class="collapse submenu" id="submenu-{{ item.code }}">
+            <ul class="nav flex-column">
+                {% for child in item.children %}
+                <li class="nav-item">
+                    <a class="nav-link sidebar-link submenu-link {% if request.path == child.get_url %}active{% endif %}"
+                        href="{{ child.get_url }}" {% if collapsed %}data-bs-toggle="tooltip" data-bs-placement="left"
+                        title="{{ child.label }}" {% endif %}>
+                        <i class="bi {{ child.icon }} link-icon"></i>
+                        <span class="link-text">{{ child.label }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </li>
+    {% else %}
+    {# Simple menu item #}
+    <li class="nav-item">
+        <a class="nav-link sidebar-link {% if request.path == item.get_url %}active{% endif %}"
+            href="{{ item.get_url }}" {% if collapsed %}data-bs-toggle="tooltip" data-bs-placement="left"
+            title="{{ item.label }}" {% endif %}>
+            <i class="bi {{ item.icon }} link-icon"></i>
+            <span class="link-text">{{ item.label }}</span>
+            {% if item.badge %}
+            <span class="badge {{ item.badge_class }} ms-auto">{{ item.badge }}</span>
+            {% endif %}
+        </a>
+    </li>
+    {% endif %}
+    {% empty %}
+    <li class="nav-item">
+        <span class="nav-link text-muted">
+            <i class="bi bi-exclamation-circle"></i>
+            <span class="link-text">لا توجد عناصر</span>
+        </span>
+    </li>
+    {% endfor %}
+</ul>

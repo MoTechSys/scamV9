@@ -1,0 +1,80 @@
+{% comment %}
+قائمة الملفات - Partial Template
+يستخدم مع HTMX للتحديث الجزئي
+{% endcomment %}
+
+{% if files %}
+<div class="file-list">
+    {% for file in files %}
+    <div class="file-item card mb-2" id="file-{{ file.id }}">
+        <div class="card-body d-flex align-items-center py-2">
+            <!-- أيقونة نوع الملف -->
+            <div class="file-icon me-3">
+                {% if file.is_pdf %}
+                <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
+                {% elif file.is_video %}
+                <i class="bi bi-file-earmark-play text-primary fs-4"></i>
+                {% elif file.is_image %}
+                <i class="bi bi-file-earmark-image text-success fs-4"></i>
+                {% else %}
+                <i class="bi bi-file-earmark text-secondary fs-4"></i>
+                {% endif %}
+            </div>
+            
+            <!-- معلومات الملف -->
+            <div class="file-info flex-grow-1">
+                <h6 class="mb-0">
+                    <a href="{% url 'courses:file_view' file.id %}" 
+                       class="text-decoration-none">
+                        {{ file.title }}
+                    </a>
+                    {% if not file.is_visible %}
+                    <span class="badge bg-warning text-dark ms-1">مخفي</span>
+                    {% endif %}
+                </h6>
+                <small class="text-muted">
+                    {{ file.file_type }} • 
+                    {{ file.upload_date|date:"Y/m/d" }} •
+                    <i class="bi bi-download"></i> {{ file.download_count }}
+                    <i class="bi bi-eye ms-2"></i> {{ file.view_count }}
+                </small>
+            </div>
+            
+            <!-- أزرار الإجراءات -->
+            <div class="file-actions">
+                <a href="{% url 'courses:file_download' file.id %}" 
+                   class="btn btn-sm btn-outline-primary me-1"
+                   title="تحميل">
+                    <i class="bi bi-download"></i>
+                </a>
+                
+                {% if can_manage %}
+                <!-- زر تبديل الظهور -->
+                <button hx-post="{% url 'courses:htmx_toggle_visibility' file.id %}"
+                        hx-swap="outerHTML"
+                        class="btn btn-sm btn-outline-{{ file.is_visible|yesno:'warning,success' }} me-1"
+                        title="{{ file.is_visible|yesno:'إخفاء,إظهار' }}">
+                    <i class="bi bi-eye{{ file.is_visible|yesno:'-slash,' }}"></i>
+                </button>
+                
+                <!-- زر الحذف -->
+                <button hx-delete="{% url 'courses:htmx_delete_file' file.id %}"
+                        hx-confirm="هل أنت متأكد من حذف هذا الملف؟"
+                        hx-target="#file-{{ file.id }}"
+                        hx-swap="outerHTML"
+                        class="btn btn-sm btn-outline-danger"
+                        title="حذف">
+                    <i class="bi bi-trash"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-folder2-open display-4"></i>
+    <p class="mt-2">لا توجد ملفات</p>
+</div>
+{% endif %}

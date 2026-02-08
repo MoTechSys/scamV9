@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ course.course_name }} - S-ACM{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'courses:student_dashboard' %}">لوحة التحكم</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'courses:student_course_list' %}">مقرراتي</a></li>
+        <li class="breadcrumb-item active">{{ course.course_code }}</li>
+    </ol>
+</nav>
+
+<!-- Course Header -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <span class="badge bg-primary mb-2">{{ course.course_code }}</span>
+                <h2 class="mb-2">{{ course.course_name }}</h2>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-layers me-1"></i>{{ course.level.level_name }} •
+                    <i class="bi bi-file-earmark me-1"></i>{{ files|length }} ملف متاح
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                {% if is_archived %}
+                <span class="badge bg-secondary fs-6">
+                    <i class="bi bi-archive me-1"></i>مؤرشف
+                </span>
+                {% else %}
+                <span class="badge bg-success fs-6">
+                    <i class="bi bi-check-circle me-1"></i>حالي
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% if course.description %}
+        <hr>
+        <p class="mb-0">{{ course.description }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Files Section -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-folder me-2"></i>ملفات المقرر</span>
+        
+        <!-- Filter -->
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-funnel me-1"></i>تصفية
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item {% if not file_type %}active{% endif %}" href="?">الكل</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item {% if file_type == 'lecture' %}active{% endif %}" href="?type=lecture">محاضرات</a></li>
+                <li><a class="dropdown-item {% if file_type == 'summary' %}active{% endif %}" href="?type=summary">ملخصات</a></li>
+                <li><a class="dropdown-item {% if file_type == 'assignment' %}active{% endif %}" href="?type=assignment">واجبات</a></li>
+                <li><a class="dropdown-item {% if file_type == 'exam' %}active{% endif %}" href="?type=exam">اختبارات</a></li>
+                <li><a class="dropdown-item {% if file_type == 'other' %}active{% endif %}" href="?type=other">أخرى</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% for file in files %}
+        <div class="file-item">
+            <div class="file-icon {% if file.local_file %}{% if '.pdf' in file.local_file.name %}pdf{% elif '.doc' in file.local_file.name %}doc{% elif '.ppt' in file.local_file.name %}ppt{% elif '.mp4' in file.local_file.name or '.webm' in file.local_file.name %}video{% else %}other{% endif %}{% elif file.content_type == 'external_link' %}other{% else %}other{% endif %}">
+                {% if file.content_type == 'external_link' %}
+                <i class="bi bi-link-45deg"></i>
+                {% elif file.local_file and '.mp4' in file.local_file.name %}
+                <i class="bi bi-play-circle"></i>
+                {% else %}
+                <i class="bi bi-file-earmark"></i>
+                {% endif %}
+            </div>
+            <div class="file-info flex-grow-1">
+                <div class="file-title">{{ file.title }}</div>
+                <div class="file-meta">
+                    <span class="badge bg-light text-dark me-2">{{ file.get_file_type_display }}</span>
+                    <i class="bi bi-calendar me-1"></i>{{ file.upload_date|date:"Y/m/d" }}
+                    {% if file.download_count %}
+                    • <i class="bi bi-download me-1"></i>{{ file.download_count }}
+                    {% endif %}
+                </div>
+                {% if file.description %}
+                <p class="text-muted small mb-0 mt-1">{{ file.description|truncatewords:20 }}</p>
+                {% endif %}
+            </div>
+            <div class="file-actions">
+                {% if file.content_type == 'external_link' %}
+                <a href="{{ file.external_link }}" target="_blank" class="btn btn-outline-primary btn-sm" title="فتح الرابط">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+                {% else %}
+                <a href="{% url 'courses:file_download' file.pk %}" class="btn btn-outline-primary btn-sm" title="تحميل">
+                    <i class="bi bi-download"></i>
+                </a>
+                {% endif %}
+                
+                <!-- AI Features -->
+                {% if file.content_type != 'external_link' %}
+                <div class="dropdown">
+                    <button class="btn btn-outline-info btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" title="ميزات الذكاء الاصطناعي">
+                        <i class="bi bi-robot"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'ai_features:summarize' file.pk %}">
+                            <i class="bi bi-file-text me-2"></i>تلخيص
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'ai_features:questions' file.pk %}">
+                            <i class="bi bi-question-circle me-2"></i>توليد أسئلة
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'ai_features:ask_document' file.pk %}">
+                            <i class="bi bi-chat-dots me-2"></i>اسأل المستند
+                        </a></li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <i class="bi bi-folder-x display-1 text-muted"></i>
+            <h4 class="mt-3 text-muted">لا توجد ملفات</h4>
+            <p class="text-muted">لم يتم رفع أي ملفات لهذا المقرر بعد</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

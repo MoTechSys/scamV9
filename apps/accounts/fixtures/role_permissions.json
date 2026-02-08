@@ -1,0 +1,74 @@
+[
+    {
+        "model": "accounts.rolepermission",
+        "pk": 1,
+        "fields": {
+            "role": 2,
+            "permission": 1
+        }
+    },
+    {
+        "model": "accounts.rolepermission",
+        "pk": 2,
+        "fields": {
+            "role": 2,
+            "permission": 3
+        }
+    },
+    {
+        "model": "accounts.rolepermission",
+        "pk": 3,
+        "fields": {
+            "role": 2,
+            "permission": 4
+        }
+    },
+    {
+        "model": "accounts.rolepermission",
+        "pk": 4,
+        "fields": {
+            "role": 2,
+            "permission": 5
+        }
+    },
+    {
+        "model": "accounts.rolepermission",
+        "pk": 5,
+        "fields": {
+            "role": 2,
+            "permission": 10
+        }
+    },
+    {
+        "model": "accounts.rolepermission",
+        "pk": 6,
+        "fields": {
+            "role": 2,
+            "permission": 12
+        }
+    },
+    {
+        "model": "accounts.rolepermission",
+        "pk": 7,
+        "fields": {
+            "role": 3,
+            "permission": 1
+        }
+    },
+    {
+        "model": "accounts.rolepermission",
+        "pk": 8,
+        "fields": {
+            "role": 3,
+            "permission": 3
+        }
+    },
+    {
+        "model": "accounts.rolepermission",
+        "pk": 9,
+        "fields": {
+            "role": 3,
+            "permission": 12
+        }
+    }
+]

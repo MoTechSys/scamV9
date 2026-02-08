@@ -1,0 +1,206 @@
+[
+    {
+        "model": "accounts.permission",
+        "pk": 1,
+        "fields": {
+            "code": "view_courses",
+            "display_name": "عرض المقررات",
+            "description": "يسمح بعرض قائمة المقررات ومحتوياتها",
+            "category": "courses",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 2,
+        "fields": {
+            "code": "manage_courses",
+            "display_name": "إدارة المقررات",
+            "description": "إنشاء وتعديل وحذف المقررات",
+            "category": "courses",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 3,
+        "fields": {
+            "code": "view_files",
+            "display_name": "عرض الملفات",
+            "description": "تحميل ومشاهدة الملفات",
+            "category": "files",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 4,
+        "fields": {
+            "code": "upload_files",
+            "display_name": "رفع الملفات",
+            "description": "رفع ملفات جديدة للمقررات",
+            "category": "files",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 5,
+        "fields": {
+            "code": "manage_files",
+            "display_name": "إدارة الملفات",
+            "description": "تعديل وحذف وإخفاء الملفات",
+            "category": "files",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 6,
+        "fields": {
+            "code": "view_users",
+            "display_name": "عرض المستخدمين",
+            "description": "عرض قائمة المستخدمين",
+            "category": "users",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 7,
+        "fields": {
+            "code": "manage_users",
+            "display_name": "إدارة المستخدمين",
+            "description": "إنشاء وتعديل وحذف المستخدمين",
+            "category": "users",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 8,
+        "fields": {
+            "code": "import_users",
+            "display_name": "استيراد المستخدمين",
+            "description": "استيراد مستخدمين من ملفات CSV",
+            "category": "users",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 9,
+        "fields": {
+            "code": "promote_students",
+            "display_name": "ترقية الطلاب",
+            "description": "ترقية الطلاب للمستوى التالي",
+            "category": "users",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 10,
+        "fields": {
+            "code": "send_notifications",
+            "display_name": "إرسال الإشعارات",
+            "description": "إرسال إشعارات للمستخدمين",
+            "category": "notifications",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 11,
+        "fields": {
+            "code": "view_all_notifications",
+            "display_name": "عرض كل الإشعارات",
+            "description": "عرض جميع إشعارات النظام",
+            "category": "notifications",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 12,
+        "fields": {
+            "code": "use_ai_features",
+            "display_name": "استخدام الذكاء الاصطناعي",
+            "description": "استخدام ميزات التلخيص والأسئلة",
+            "category": "ai",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 13,
+        "fields": {
+            "code": "manage_roles",
+            "display_name": "إدارة الأدوار",
+            "description": "إنشاء وتعديل أدوار المستخدمين",
+            "category": "system",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 14,
+        "fields": {
+            "code": "manage_permissions",
+            "display_name": "إدارة الصلاحيات",
+            "description": "تعيين الصلاحيات للأدوار",
+            "category": "system",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 15,
+        "fields": {
+            "code": "manage_settings",
+            "display_name": "إدارة الإعدادات",
+            "description": "تعديل إعدادات النظام",
+            "category": "system",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 16,
+        "fields": {
+            "code": "view_audit_logs",
+            "display_name": "عرض سجلات التدقيق",
+            "description": "عرض سجلات أنشطة النظام",
+            "category": "system",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "accounts.permission",
+        "pk": 17,
+        "fields": {
+            "code": "view_statistics",
+            "display_name": "عرض الإحصائيات",
+            "description": "عرض إحصائيات النظام",
+            "category": "system",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    }
+]
