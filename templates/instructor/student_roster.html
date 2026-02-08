@@ -1,0 +1,41 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}قائمة الطلاب - {{ course.course_code }}{% endblock %}
+{% block page_title %}قائمة طلاب {{ course.course_code }}{% endblock %}
+{% block breadcrumb %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb breadcrumb-custom">
+    <li class="breadcrumb-item"><a href="{% url 'instructor:course_detail' course.pk %}">{{ course.course_code }}</a></li>
+    <li class="breadcrumb-item active">قائمة الطلاب</li>
+</ol></nav>
+{% endblock %}
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h6 class="mb-0"><strong>{{ total_students }}</strong> طالب مسجل</h6>
+    <a href="{% url 'instructor:roster_export_excel' course.pk %}" class="btn btn-success"><i class="bi bi-file-earmark-excel me-1"></i>تصدير Excel</a>
+</div>
+<div class="card">
+    <div class="card-body p-0">
+        {% if student_data %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead><tr><th>#</th><th>الطالب</th><th>الرقم الأكاديمي</th><th>المشاهدات</th><th>التحميلات</th><th>AI</th><th>آخر نشاط</th></tr></thead>
+                <tbody>
+                {% for item in student_data %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ item.student.full_name }}</strong></td>
+                    <td><code>{{ item.student.academic_id }}</code></td>
+                    <td>{{ item.views }}</td>
+                    <td>{{ item.downloads }}</td>
+                    <td>{{ item.ai_usage }}</td>
+                    <td><small class="text-muted">{% if item.last_activity %}{{ item.last_activity.activity_time|timesince }}{% else %}-{% endif %}</small></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-5"><i class="bi bi-people d-block"></i><p>لا يوجد طلاب مسجلين في هذا المقرر</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

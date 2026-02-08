@@ -1,0 +1,157 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}مركز الذكاء الاصطناعي{% endblock %}
+{% block page_title %}مركز الذكاء الاصطناعي{% endblock %}
+
+{% block dashboard_content %}
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item"><a class="nav-link {% if active_tab == 'generator' %}active{% endif %}" data-bs-toggle="tab" href="#generator"><i class="bi bi-magic me-1"></i>المولّد</a></li>
+    <li class="nav-item"><a class="nav-link {% if active_tab == 'archives' %}active{% endif %}" data-bs-toggle="tab" href="#archives"><i class="bi bi-archive me-1"></i>الأرشيف</a></li>
+</ul>
+
+<div class="tab-content">
+    <!-- Generator Tab -->
+    <div class="tab-pane fade {% if active_tab == 'generator' %}show active{% endif %}" id="generator">
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="post" action="{% url 'instructor:ai_generate' %}">
+                    {% csrf_token %}
+                    <!-- Source Selection -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">المقرر</label>
+                            <select class="form-select" id="courseSelect" name="course_id" onchange="loadFiles(this.value)" required>
+                                <option value="">اختر المقرر...</option>
+                                {% for course in courses %}
+                                <option value="{{ course.pk }}">{{ course.course_code }} - {{ course.course_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">الملف</label>
+                            <select class="form-select" id="fileSelect" name="file_id" required>
+                                <option value="">اختر المقرر أولاً...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Question Matrix -->
+                    <h6 class="fw-bold mb-3"><i class="bi bi-grid-3x3 me-1"></i>مصفوفة الأسئلة</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr><th>النوع</th><th>العدد</th><th>الدرجة لكل سؤال</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>اختيار من متعدد (MCQ)</td>
+                                    <td><input type="number" class="form-control form-control-sm q-count" name="mcq_count" value="5" min="0" max="50"></td>
+                                    <td><input type="number" class="form-control form-control-sm q-score" name="mcq_score" value="2.0" min="0" max="100" step="0.5"></td>
+                                </tr>
+                                <tr>
+                                    <td>صح وخطأ</td>
+                                    <td><input type="number" class="form-control form-control-sm q-count" name="true_false_count" value="5" min="0" max="50"></td>
+                                    <td><input type="number" class="form-control form-control-sm q-score" name="true_false_score" value="1.0" min="0" max="100" step="0.5"></td>
+                                </tr>
+                                <tr>
+                                    <td>إجابة قصيرة</td>
+                                    <td><input type="number" class="form-control form-control-sm q-count" name="short_answer_count" value="3" min="0" max="50"></td>
+                                    <td><input type="number" class="form-control form-control-sm q-score" name="short_answer_score" value="3.0" min="0" max="100" step="0.5"></td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr><td class="fw-bold">الإجمالي</td><td id="totalQuestions" class="fw-bold">13</td><td id="totalScore" class="fw-bold">24.0</td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Context Notes -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">ملاحظات السياق (اختياري)</label>
+                        <textarea class="form-control" name="user_notes" rows="3" placeholder="مثال: ركّز على الفصل الثالث، صعوبة متوسطة، أضف أمثلة عملية..."></textarea>
+                    </div>
+
+                    <!-- Generate Summary Option -->
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" name="generate_summary" id="genSummary">
+                        <label class="form-check-label" for="genSummary">توليد ملخص أيضاً</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-stars me-2"></i>توليد بالذكاء الاصطناعي
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archives Tab -->
+    <div class="tab-pane fade {% if active_tab == 'archives' %}show active{% endif %}" id="archives">
+        <div class="card">
+            <div class="card-body p-0">
+                {% if recent_jobs %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>التاريخ</th><th>الملف</th><th>النوع</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                        <tbody>
+                        {% for job in recent_jobs %}
+                        <tr>
+                            <td><small>{{ job.created_at|date:"Y/m/d H:i" }}</small></td>
+                            <td>{{ job.file.title|truncatechars:30 }}<br><small class="text-muted">{{ job.file.course.course_code }}</small></td>
+                            <td><span class="badge bg-primary-subtle text-primary">{{ job.get_job_type_display }}</span></td>
+                            <td>
+                                {% if job.status == 'completed' %}<span class="badge bg-success">مكتمل</span>
+                                {% elif job.status == 'failed' %}<span class="badge bg-danger">فشل</span>
+                                {% elif job.status == 'processing' %}<span class="badge bg-warning">قيد المعالجة</span>
+                                {% else %}<span class="badge bg-secondary">انتظار</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if job.md_file_path %}<a href="{% url 'streaming:stream_markdown' job.md_file_path %}" class="btn btn-sm btn-outline-primary" target="_blank"><i class="bi bi-eye"></i></a>{% endif %}
+                                <form method="post" action="{% url 'instructor:ai_archive_delete' job.pk %}" class="d-inline" onsubmit="return confirm('حذف هذا السجل؟')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state py-5"><i class="bi bi-archive d-block"></i><p>لا توجد عمليات سابقة</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadFiles(courseId) {
+    const fileSelect = document.getElementById('fileSelect');
+    fileSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+    if (!courseId) { fileSelect.innerHTML = '<option value="">اختر المقرر أولاً...</option>'; return; }
+    fetch(`{% url 'instructor:course_files_ajax' %}?course_id=${courseId}`)
+        .then(r => r.json()).then(data => {
+            fileSelect.innerHTML = '<option value="">اختر الملف...</option>';
+            data.files.forEach(f => {
+                fileSelect.innerHTML += `<option value="${f.id}">${f.title} (${f.file_extension || f.file_type})</option>`;
+            });
+        }).catch(() => { fileSelect.innerHTML = '<option value="">خطأ في التحميل</option>'; });
+}
+// Calculate totals
+document.querySelectorAll('.q-count, .q-score').forEach(el => {
+    el.addEventListener('input', () => {
+        let totalQ = 0, totalS = 0;
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const count = parseFloat(row.querySelector('.q-count')?.value || 0);
+            const score = parseFloat(row.querySelector('.q-score')?.value || 0);
+            totalQ += count;
+            totalS += count * score;
+        });
+        document.getElementById('totalQuestions').textContent = totalQ;
+        document.getElementById('totalScore').textContent = totalS.toFixed(1);
+    });
+});
+</script>
+{% endblock %}

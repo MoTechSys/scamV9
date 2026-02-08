@@ -1,0 +1,82 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}{{ course.course_code }} - تفاصيل المقرر{% endblock %}
+{% block page_title %}{{ course.course_code }} - {{ course.course_name }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb breadcrumb-custom">
+    <li class="breadcrumb-item"><a href="{% url 'instructor:course_list' %}">مقرراتي</a></li>
+    <li class="breadcrumb-item active">{{ course.course_code }}</li>
+</ol></nav>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row g-3 mb-4">
+    <div class="col-auto"><div class="stat-card bg-gradient-primary px-4 py-3"><div class="stat-value h5 mb-0">{{ all_files.count }}</div><div class="stat-label">ملف</div></div></div>
+    <div class="col-auto"><div class="stat-card bg-gradient-info px-4 py-3"><div class="stat-value h5 mb-0">{{ total_views }}</div><div class="stat-label">مشاهدة</div></div></div>
+    <div class="col-auto"><div class="stat-card bg-gradient-success px-4 py-3"><div class="stat-value h5 mb-0">{{ total_downloads }}</div><div class="stat-label">تحميل</div></div></div>
+    <div class="col-auto"><div class="stat-card bg-gradient-warning px-4 py-3"><div class="stat-value h5 mb-0">{{ students_count }}</div><div class="stat-label">طالب</div></div></div>
+</div>
+
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <a href="{% url 'instructor:file_upload' %}?course={{ course.pk }}" class="btn btn-primary"><i class="bi bi-upload me-1"></i>رفع ملف</a>
+    <a href="{% url 'instructor:student_roster' course.pk %}" class="btn btn-outline-primary"><i class="bi bi-people me-1"></i>قائمة الطلاب</a>
+    <a href="{% url 'instructor:roster_export_excel' course.pk %}" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>تصدير Excel</a>
+</div>
+
+<!-- Files with Bulk Actions -->
+<div class="card">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-files me-2"></i>الملفات ({{ all_files.count }})</h6>
+    </div>
+    <div class="card-body p-0">
+        {% if all_files %}
+        <form method="post" action="{% url 'instructor:file_bulk_action' %}">
+            {% csrf_token %}
+            <input type="hidden" name="redirect_url" value="{% url 'instructor:course_detail' course.pk %}">
+            <div class="p-3 bg-light d-flex gap-2 align-items-center flex-wrap">
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAll" onchange="document.querySelectorAll('.file-check').forEach(c=>c.checked=this.checked)"><label class="form-check-label small" for="selectAll">تحديد الكل</label></div>
+                <select name="action" class="form-select form-select-sm" style="width:auto;">
+                    <option value="">إجراء جماعي...</option>
+                    <option value="hide">إخفاء</option>
+                    <option value="show">إظهار</option>
+                    <option value="delete">نقل للمهملات</option>
+                </select>
+                <button type="submit" class="btn btn-sm btn-outline-primary">تنفيذ</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th width="30"></th><th>الملف</th><th>النوع</th><th>الحالة</th><th>المشاهدات</th><th>التحميلات</th><th>إجراءات</th></tr></thead>
+                    <tbody>
+                    {% for file in all_files %}
+                    <tr>
+                        <td><input class="form-check-input file-check" type="checkbox" name="file_ids" value="{{ file.pk }}"></td>
+                        <td>
+                            <div class="fw-semibold">{{ file.title|truncatechars:40 }}</div>
+                            <small class="text-muted">{{ file.upload_date|date:"Y/m/d" }} | {{ file.file_extension|default:"-" }}</small>
+                        </td>
+                        <td><span class="badge bg-primary-subtle text-primary">{{ file.get_file_type_display }}</span></td>
+                        <td>
+                            {% if file.is_visible %}<span class="badge bg-success-subtle text-success">مرئي</span>
+                            {% else %}<span class="badge bg-warning-subtle text-warning">مخفي</span>{% endif %}
+                        </td>
+                        <td>{{ file.view_count }}</td>
+                        <td>{{ file.download_count }}</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <form method="post" action="{% url 'instructor:file_toggle_visibility' file.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" title="تبديل الظهور"><i class="bi bi-eye{% if not file.is_visible %}-slash{% endif %}"></i></button></form>
+                                <a href="{% url 'instructor:file_update' file.pk %}" class="btn btn-sm btn-outline-primary" title="تعديل"><i class="bi bi-pencil"></i></a>
+                                <form method="post" action="{% url 'instructor:file_delete' file.pk %}" class="d-inline" onsubmit="return confirm('نقل للمهملات؟')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button></form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+        {% else %}
+        <div class="empty-state py-5"><i class="bi bi-files d-block"></i><p>لا توجد ملفات في هذا المقرر</p><a href="{% url 'instructor:file_upload' %}?course={{ course.pk }}" class="btn btn-primary mt-2"><i class="bi bi-upload me-1"></i>رفع ملف</a></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}مقرراتي{% endblock %}
+{% block page_title %}مقرراتي{% endblock %}
+{% block dashboard_content %}
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><a class="nav-link {% if view_type == 'current' %}active{% endif %}" href="{% url 'student:course_list' %}?view=current">الفصل الحالي</a></li>
+    <li class="nav-item"><a class="nav-link {% if view_type == 'archived' %}active{% endif %}" href="{% url 'student:course_list' %}?view=archived">الأرشيف</a></li>
+</ul>
+{% if courses %}
+<div class="row g-3">
+    {% for course in courses %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100"><div class="card-body">
+            <h6 class="fw-bold">{{ course.course_code }}</h6>
+            <p class="text-muted small">{{ course.course_name }}</p>
+            <div class="d-flex gap-3 small text-muted mb-3"><span><i class="bi bi-layer-forward me-1"></i>{{ course.level }}</span><span><i class="bi bi-files me-1"></i>{{ course.get_files_count }} ملف</span></div>
+            <a href="{% url 'student:course_detail' course.pk %}" class="btn btn-primary btn-sm w-100">فتح المقرر</a>
+        </div></div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-body empty-state"><i class="bi bi-book d-block"></i><p>لا توجد مقررات</p></div></div>
+{% endif %}
+{% endblock %}

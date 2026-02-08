@@ -33,9 +33,9 @@ def dashboard_redirect(request):
     if user.is_superuser or user.is_admin():
         return redirect('/scam-admin/')
     elif user.is_instructor():
-        return redirect('courses:instructor_dashboard')
+        return redirect('instructor:dashboard')
     elif user.is_student():
-        return redirect('courses:student_dashboard')
+        return redirect('student:dashboard')
     else:
         # إذا لم يكن له دور محدد
         return redirect('accounts:profile')
