@@ -667,10 +667,19 @@ class GeminiService:
                 last_exception = e
                 error_str = str(e).lower()
 
-                if "rate" in error_str or "quota" in error_str or "429" in error_str:
+                if "rate" in error_str or "quota" in error_str or "429" in error_str or "resource_exhausted" in error_str:
                     logger.warning(f"Rate limit on attempt {attempt + 1}, rotating key...")
                     self._reinitialize_with_next_key()
-                    time.sleep(1.0 * (2 ** attempt))
+                    
+                    # Extract retry delay from error if available
+                    import re
+                    retry_match = re.search(r'retry in (\d+)', str(e).lower())
+                    if retry_match:
+                        wait_time = min(int(retry_match.group(1)), 60)  # Max 60 seconds
+                    else:
+                        wait_time = min(5.0 * (2 ** attempt), 30)  # Exponential backoff, max 30s
+                    
+                    time.sleep(wait_time)
                     continue
                 elif "invalid" in error_str and "key" in error_str:
                     logger.error(f"Invalid API key, rotating...")
@@ -683,6 +692,9 @@ class GeminiService:
                         continue
                     raise GeminiAPIError(f"Gemini API error: {e}")
 
+        # Provide a user-friendly Arabic error message for quota exhaustion
+        if last_exception and ("quota" in str(last_exception).lower() or "429" in str(last_exception)):
+            raise GeminiRateLimitError("⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، أو تواصل مع المسؤول لإضافة مفاتيح API إضافية.")
         raise last_exception or GeminiAPIError("All API keys exhausted")
 
     # ========== Public Methods ==========

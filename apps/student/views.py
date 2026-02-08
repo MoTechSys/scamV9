@@ -291,7 +291,12 @@ class AIChatView(LoginRequiredMixin, StudentRequiredMixin, View):
             messages.success(request, 'تم الحصول على الإجابة!')
 
         except Exception as e:
-            error = f'حدث خطأ: {str(e)}'
+            error_str = str(e).lower()
+            # Check for rate limit / quota errors
+            if 'quota' in error_str or '429' in error_str or 'rate' in error_str or 'resource_exhausted' in error_str:
+                error = '⏳ تجاوزت الحد المسموح من الطلبات. انتظر دقيقة ثم حاول مرة أخرى.'
+            else:
+                error = f'⚠️ حدث خطأ: {str(e)[:100]}'
             if is_ajax:
                 return JsonResponse({'success': False, 'error': error})
             messages.error(request, error)
