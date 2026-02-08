@@ -1,0 +1,34 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}مقرراتي - المدرس{% endblock %}
+{% block page_title %}مقرراتي{% endblock %}
+{% block dashboard_content %}
+<div class="card">
+    <div class="card-body">
+        {% if courses %}
+        <div class="row g-3">
+            {% for course in courses %}
+            <div class="col-md-6 col-xl-4">
+                <div class="card h-100 border" style="border-right:4px solid var(--primary) !important;">
+                    <div class="card-body">
+                        <h6 class="fw-bold">{{ course.course_code }}</h6>
+                        <p class="text-muted small mb-2">{{ course.course_name }}</p>
+                        <div class="d-flex gap-3 small text-muted mb-3">
+                            <span><i class="bi bi-layer-forward me-1"></i>{{ course.level }}</span>
+                            <span><i class="bi bi-files me-1"></i>{{ course.files.count }} ملف</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-sm btn-primary flex-fill">التفاصيل</a>
+                            <a href="{% url 'instructor:student_roster' course.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-people"></i></a>
+                            <a href="{% url 'instructor:file_upload' %}?course={{ course.pk }}" class="btn btn-sm btn-outline-success"><i class="bi bi-upload"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-book d-block"></i><p>لا توجد مقررات معينة لك</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

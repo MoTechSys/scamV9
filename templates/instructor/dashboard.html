@@ -1,0 +1,119 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}لوحة التحكم - المدرس{% endblock %}
+{% block page_title %}لوحة التحكم{% endblock %}
+
+{% block dashboard_content %}
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card bg-gradient-primary">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">{{ total_courses }}</div>
+                    <div class="stat-label">المقررات</div>
+                </div>
+                <i class="bi bi-book stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card bg-gradient-success">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">{{ total_files }}</div>
+                    <div class="stat-label">الملفات</div>
+                </div>
+                <i class="bi bi-files stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card bg-gradient-info">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">{{ total_views }}</div>
+                    <div class="stat-label">المشاهدات</div>
+                </div>
+                <i class="bi bi-eye stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card bg-gradient-warning">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">{{ total_downloads }}</div>
+                    <div class="stat-label">التحميلات</div>
+                </div>
+                <i class="bi bi-download stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- My Courses -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-book me-2"></i>مقرراتي</h6>
+                <a href="{% url 'instructor:course_list' %}" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                {% if my_courses %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>المقرر</th><th>المستوى</th><th>الملفات</th><th>الطلاب</th><th>إجراءات</th></tr></thead>
+                        <tbody>
+                        {% for course in my_courses %}
+                        <tr>
+                            <td><strong>{{ course.course_code }}</strong> - {{ course.course_name|truncatechars:30 }}</td>
+                            <td><span class="badge bg-light text-dark">{{ course.level }}</span></td>
+                            <td>{{ course.files.count }}</td>
+                            <td>-</td>
+                            <td>
+                                <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                <a href="{% url 'instructor:student_roster' course.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-people"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state py-5"><i class="bi bi-book d-block"></i><p>لا توجد مقررات معينة لك حالياً</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions + Recent -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-transparent py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-lightning me-2"></i>إجراءات سريعة</h6></div>
+            <div class="card-body d-grid gap-2">
+                <a href="{% url 'instructor:file_upload' %}" class="btn btn-primary"><i class="bi bi-upload me-2"></i>رفع ملف جديد</a>
+                <a href="{% url 'instructor:ai_hub' %}" class="btn btn-outline-primary"><i class="bi bi-robot me-2"></i>مركز الذكاء الاصطناعي</a>
+                <a href="{% url 'instructor:trash_list' %}" class="btn btn-outline-secondary"><i class="bi bi-trash3 me-2"></i>سلة المهملات {% if trash_count %}({{ trash_count }}){% endif %}</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-transparent py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>آخر الرفع</h6></div>
+            <div class="list-group list-group-flush">
+                {% for file in recent_uploads %}
+                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <div class="fw-semibold small">{{ file.title|truncatechars:25 }}</div>
+                        <small class="text-muted">{{ file.course.course_code }} - {{ file.upload_date|timesince }}</small>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary">{{ file.file_type }}</span>
+                </div>
+                {% empty %}
+                <div class="list-group-item text-center text-muted py-4">لا توجد ملفات بعد</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

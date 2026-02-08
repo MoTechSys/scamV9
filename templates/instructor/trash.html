@@ -1,0 +1,40 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}سلة المهملات{% endblock %}
+{% block page_title %}سلة المهملات{% endblock %}
+{% block dashboard_content %}
+<div class="card">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-trash3 me-2"></i>الملفات المحذوفة ({{ deleted_files|length }})</h6>
+        {% if deleted_files %}
+        <form method="post" action="{% url 'instructor:trash_empty' %}" onsubmit="return confirm('إفراغ سلة المهملات نهائياً؟ لا يمكن التراجع!')">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3-fill me-1"></i>إفراغ الكل</button>
+        </form>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if deleted_files %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead><tr><th>الملف</th><th>المقرر</th><th>تاريخ الحذف</th><th>إجراءات</th></tr></thead>
+                <tbody>
+                {% for file in deleted_files %}
+                <tr>
+                    <td><div class="fw-semibold">{{ file.title }}</div><small class="text-muted">{{ file.file_extension|default:"-" }} | {{ file.get_file_type_display }}</small></td>
+                    <td>{{ file.course.course_code }}</td>
+                    <td><small>{{ file.deleted_at|date:"Y/m/d H:i" }}</small></td>
+                    <td>
+                        <form method="post" action="{% url 'instructor:trash_restore' file.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-success" title="استعادة"><i class="bi bi-arrow-counterclockwise"></i> استعادة</button></form>
+                        <form method="post" action="{% url 'instructor:trash_destroy' file.pk %}" class="d-inline" onsubmit="return confirm('حذف نهائي؟ لا يمكن التراجع!')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" title="حذف نهائي"><i class="bi bi-x-lg"></i></button></form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-5"><i class="bi bi-trash3 d-block"></i><p>سلة المهملات فارغة</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
