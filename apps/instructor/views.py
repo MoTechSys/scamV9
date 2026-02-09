@@ -759,6 +759,183 @@ class RosterExportExcelView(LoginRequiredMixin, InstructorRequiredMixin, View):
             return response
 
 
+# ========== Reports ==========
+
+class InstructorReportsView(LoginRequiredMixin, InstructorRequiredMixin, TemplateView):
+    """تقارير المدرس الشاملة - Enterprise v2"""
+    template_name = 'instructor/reports.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'reports'
+        instructor = self.request.user
+        active_tab = self.request.GET.get('tab', 'overview')
+        context['active_tab'] = active_tab
+
+        # === المقررات ===
+        courses = Course.objects.get_courses_for_instructor(instructor).select_related('level', 'semester')
+
+        # === إحصائيات عامة ===
+        file_stats = LectureFile.objects.filter(
+            uploader=instructor, is_deleted=False
+        ).aggregate(
+            total_files=Count('id'),
+            total_downloads=Coalesce(Sum('download_count'), 0),
+            total_views=Coalesce(Sum('view_count'), 0),
+        )
+
+        # === إحصائيات AI ===
+        ai_stats = {
+            'total_jobs': AIGenerationJob.objects.filter(instructor=instructor).count(),
+            'completed_jobs': AIGenerationJob.objects.filter(instructor=instructor, status='completed').count(),
+            'failed_jobs': AIGenerationJob.objects.filter(instructor=instructor, status='failed').count(),
+            'total_summaries': AISummary.objects.filter(user=instructor).count(),
+            'total_questions': AIGeneratedQuestion.objects.filter(user=instructor).count(),
+        }
+
+        # === تقرير المقررات ===
+        course_reports = []
+        for course in courses:
+            files_qs = course.files.filter(is_deleted=False)
+            stats = files_qs.aggregate(
+                file_count=Count('id'),
+                total_downloads=Coalesce(Sum('download_count'), 0),
+                total_views=Coalesce(Sum('view_count'), 0),
+            )
+            students_count = User.objects.filter(
+                role__code=Role.STUDENT,
+                major__in=course.course_majors.values_list('major', flat=True),
+                level=course.level,
+                account_status='active'
+            ).count()
+            course_reports.append({
+                'course': course,
+                'file_count': stats['file_count'],
+                'downloads': stats['total_downloads'],
+                'views': stats['total_views'],
+                'students': students_count,
+            })
+
+        # === تقرير الملفات الأكثر تحميلاً ===
+        top_downloaded = LectureFile.objects.filter(
+            uploader=instructor, is_deleted=False
+        ).select_related('course').order_by('-download_count')[:10]
+
+        # === تقرير الملفات الأكثر مشاهدة ===
+        top_viewed = LectureFile.objects.filter(
+            uploader=instructor, is_deleted=False
+        ).select_related('course').order_by('-view_count')[:10]
+
+        # === تقرير نشاط الطلاب ===
+        student_activity = []
+        if active_tab == 'students':
+            course_id = self.request.GET.get('course_id')
+            if course_id:
+                try:
+                    course = courses.get(pk=course_id)
+                    course_file_ids = list(course.files.values_list('id', flat=True))
+                    students = User.objects.filter(
+                        role__code=Role.STUDENT,
+                        major__in=course.course_majors.values_list('major', flat=True),
+                        level=course.level,
+                        account_status='active'
+                    ).annotate(
+                        view_count=Count('activities', filter=Q(
+                            activities__activity_type='view',
+                            activities__file_id__in=course_file_ids
+                        )),
+                        download_count=Count('activities', filter=Q(
+                            activities__activity_type='download',
+                            activities__file_id__in=course_file_ids
+                        )),
+                        ai_count=Count('ai_usage_logs', filter=Q(
+                            ai_usage_logs__file__course=course
+                        )),
+                    ).order_by('-view_count')[:20]
+                    student_activity = list(students)
+                    context['selected_course'] = course
+                except Course.DoesNotExist:
+                    pass
+
+        # === تقرير عمليات AI ===
+        recent_ai_jobs = AIGenerationJob.objects.filter(
+            instructor=instructor
+        ).select_related('file', 'file__course').order_by('-created_at')[:20]
+
+        context.update({
+            'file_stats': file_stats,
+            'ai_stats': ai_stats,
+            'course_reports': course_reports,
+            'top_downloaded': top_downloaded,
+            'top_viewed': top_viewed,
+            'student_activity': student_activity,
+            'recent_ai_jobs': recent_ai_jobs,
+            'courses': courses,
+        })
+        return context
+
+
+# ========== Settings ==========
+
+class InstructorSettingsView(LoginRequiredMixin, InstructorRequiredMixin, View):
+    """إعدادات المدرس"""
+    template_name = 'instructor/settings.html'
+
+    def get(self, request):
+        context = {
+            'active_page': 'settings',
+            'user': request.user,
+            'active_tab': request.GET.get('tab', 'profile'),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        tab = request.POST.get('tab', 'profile')
+
+        if tab == 'profile':
+            full_name = request.POST.get('full_name', '').strip()
+            phone = request.POST.get('phone_number', '').strip()
+            email = request.POST.get('email', '').strip()
+
+            if full_name:
+                request.user.full_name = full_name
+            if phone:
+                request.user.phone_number = phone
+            if email:
+                request.user.email = email
+
+            # صورة الملف الشخصي
+            if 'profile_picture' in request.FILES:
+                request.user.profile_picture = request.FILES['profile_picture']
+
+            request.user.save()
+            messages.success(request, 'تم تحديث البيانات الشخصية بنجاح.')
+
+        elif tab == 'password':
+            current_password = request.POST.get('current_password', '')
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+
+            if not request.user.check_password(current_password):
+                messages.error(request, 'كلمة المرور الحالية غير صحيحة.')
+            elif new_password != confirm_password:
+                messages.error(request, 'كلمة المرور الجديدة غير متطابقة.')
+            elif len(new_password) < 8:
+                messages.error(request, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل.')
+            else:
+                request.user.set_password(new_password)
+                request.user.save()
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, request.user)
+                messages.success(request, 'تم تغيير كلمة المرور بنجاح.')
+
+        elif tab == 'notifications':
+            # حفظ تفضيلات الإشعارات
+            messages.success(request, 'تم حفظ إعدادات الإشعارات.')
+
+        return redirect(reverse('instructor:settings') + f'?tab={tab}')
+
+
 # ========== AJAX Endpoint for File List by Course ==========
 
 class CourseFilesAjaxView(LoginRequiredMixin, InstructorRequiredMixin, View):

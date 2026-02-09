@@ -1,0 +1,371 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}مركز الذكاء الاصطناعي - S-ACM{% endblock %}
+{% block page_title %}مركز الذكاء الاصطناعي{% endblock %}
+
+{% block extra_styles %}
+/* === AI Center Styles === */
+.ai-step {
+    padding: 24px;
+    margin-bottom: 20px;
+    border-radius: var(--radius, 12px);
+    background: var(--bg-card, #fff);
+    box-shadow: var(--shadow-sm);
+    border-right: 4px solid var(--primary, #6366f1);
+    transition: all 0.3s ease;
+}
+.ai-step.active-step {
+    border-right-color: var(--success, #22c55e);
+    box-shadow: var(--shadow-md);
+}
+.step-number {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.85rem;
+    background: var(--primary, #6366f1); color: #fff;
+    margin-left: 10px; flex-shrink: 0;
+}
+.step-title {
+    font-weight: 700; font-size: 1.05rem;
+    color: var(--text-primary, #1e293b);
+}
+.action-btn-group {
+    display: flex; gap: 12px; flex-wrap: wrap;
+}
+.action-card {
+    flex: 1; min-width: 150px; padding: 20px 16px;
+    border-radius: var(--radius-sm, 8px);
+    border: 2px solid var(--border-color, #e2e8f0);
+    text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--bg-card, #fff);
+}
+.action-card:hover {
+    border-color: var(--primary, #6366f1);
+    background: rgba(99, 102, 241, 0.04);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.action-card.selected {
+    border-color: var(--primary, #6366f1);
+    background: rgba(99, 102, 241, 0.08);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.action-card i { font-size: 2rem; display: block; margin-bottom: 8px; }
+.action-card .action-title { font-weight: 700; font-size: 0.95rem; }
+.action-card .action-desc { font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; }
+
+/* Smart Chips */
+.smart-chips {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+}
+.smart-chip {
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 600;
+    border: 1px solid var(--border-color, #e2e8f0);
+    color: var(--text-secondary, #64748b);
+    background: transparent; cursor: pointer;
+    transition: all 0.2s;
+}
+.smart-chip:hover {
+    background: var(--primary, #6366f1);
+    color: #fff; border-color: var(--primary, #6366f1);
+}
+.smart-chip.active {
+    background: var(--primary, #6366f1);
+    color: #fff; border-color: var(--primary, #6366f1);
+}
+
+/* Files list */
+.files-container {
+    max-height: 300px; overflow-y: auto;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: var(--radius-sm, 8px);
+}
+.files-container::-webkit-scrollbar { width: 6px; }
+.files-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+.files-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* Quiz config modal */
+.quiz-config-grid {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+}
+.quiz-config-grid .type-label {
+    font-weight: 600; font-size: 0.9rem;
+    display: flex; align-items: center; gap: 8px;
+}
+.quiz-config-grid input {
+    width: 70px; text-align: center;
+}
+
+/* Remaining requests badge */
+.remaining-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 600;
+    background: rgba(34, 197, 94, 0.1); color: #22c55e;
+}
+.remaining-badge.low { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.remaining-badge.empty { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+@media (max-width: 767.98px) {
+    .action-btn-group { flex-direction: column; }
+    .action-card { min-width: 100%; }
+    .quiz-config-grid { grid-template-columns: 1fr; }
+}
+{% endblock %}
+
+{% block dashboard_content %}
+<form method="post" action="{% url 'student:ai_center_process' %}" id="ai-form">
+{% csrf_token %}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-1"><i class="bi bi-stars me-2" style="color:var(--primary);"></i>مركز الذكاء الاصطناعي المتقدم</h5>
+        <p class="text-muted mb-0" style="font-size:0.85rem;">اختر المحتوى، حدد الإجراء، وأضف توجيهاتك المخصصة</p>
+    </div>
+    <div class="remaining-badge {% if remaining_requests < 3 %}low{% endif %}{% if remaining_requests == 0 %} empty{% endif %}">
+        <i class="bi bi-lightning-charge"></i>
+        <span>{{ remaining_requests }} طلبات متبقية</span>
+    </div>
+</div>
+
+<!-- ============ Step 1: Context Selection ============ -->
+<div class="ai-step" id="step-1">
+    <div class="d-flex align-items-center mb-3">
+        <span class="step-number">1</span>
+        <span class="step-title">اختيار السياق</span>
+    </div>
+
+    <!-- Course Selection -->
+    <div class="mb-3">
+        <label class="form-label fw-semibold"><i class="bi bi-book me-1"></i>المقرر الدراسي</label>
+        <select class="form-select" id="course-select" name="course_id"
+                hx-get="{% url 'student:course_files_ajax' %}"
+                hx-target="#files-list"
+                hx-trigger="change"
+                hx-include="[name='course_id']"
+                hx-swap="innerHTML">
+            <option value="">-- اختر المقرر --</option>
+            {% for course in courses %}
+            <option value="{{ course.pk }}">{{ course.course_code }} - {{ course.course_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Files Selection (HTMX-loaded checkboxes) -->
+    <div class="mb-2">
+        <label class="form-label fw-semibold"><i class="bi bi-files me-1"></i>اختر الملازم / الملفات</label>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <small class="text-muted">حدد الملفات التي تريد أن يعمل عليها الذكاء الاصطناعي</small>
+            <button type="button" class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-size:0.75rem;" onclick="toggleAllFiles()">
+                <i class="bi bi-check-all me-1"></i>تحديد/إلغاء الكل
+            </button>
+        </div>
+        <div class="files-container" id="files-list">
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-arrow-up-circle fs-3 d-block mb-2" style="opacity:0.3;"></i>
+                <span>اختر المقرر أولاً لعرض الملفات</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ Step 2: Action Selection ============ -->
+<div class="ai-step" id="step-2">
+    <div class="d-flex align-items-center mb-3">
+        <span class="step-number">2</span>
+        <span class="step-title">اختيار الإجراء</span>
+    </div>
+
+    <input type="hidden" name="action_type" id="action-type" value="summarize">
+
+    <div class="action-btn-group">
+        <div class="action-card selected" data-action="summarize" onclick="selectAction(this, 'summarize')">
+            <i class="bi bi-file-text" style="color:var(--primary);"></i>
+            <div class="action-title">تلخيص</div>
+            <div class="action-desc">ملخص شامل ومنظم</div>
+        </div>
+        <div class="action-card" data-action="chat" onclick="selectAction(this, 'chat')">
+            <i class="bi bi-chat-dots" style="color:var(--secondary);"></i>
+            <div class="action-title">دردشة</div>
+            <div class="action-desc">اطرح سؤالاً محدداً</div>
+        </div>
+        <div class="action-card" data-action="quiz" onclick="selectAction(this, 'quiz')">
+            <i class="bi bi-question-circle" style="color:var(--warning);"></i>
+            <div class="action-title">توليد أسئلة</div>
+            <div class="action-desc">اختبارات وأسئلة تفاعلية</div>
+        </div>
+    </div>
+
+    <!-- Quiz Configuration (shown only when quiz selected) -->
+    <div id="quiz-config" class="mt-4 p-3" style="display:none;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:rgba(245,158,11,0.04);">
+        <h6 class="fw-bold mb-3"><i class="bi bi-sliders me-2" style="color:var(--warning);"></i>إعدادات الأسئلة</h6>
+        <div class="quiz-config-grid">
+            <div class="type-label"><i class="bi bi-ui-radios" style="color:var(--primary);"></i> اختيار من متعدد (MCQ)</div>
+            <div><label class="small text-muted">العدد</label><input type="number" name="mcq_count" class="form-control form-control-sm" value="3" min="0" max="20"></div>
+            <div><label class="small text-muted">الدرجة</label><input type="number" name="mcq_score" class="form-control form-control-sm" value="2" min="0.5" max="10" step="0.5"></div>
+
+            <div class="type-label"><i class="bi bi-check-circle" style="color:var(--success);"></i> صح وخطأ (T/F)</div>
+            <div><input type="number" name="tf_count" class="form-control form-control-sm" value="2" min="0" max="20"></div>
+            <div><input type="number" name="tf_score" class="form-control form-control-sm" value="1" min="0.5" max="10" step="0.5"></div>
+
+            <div class="type-label"><i class="bi bi-pencil-square" style="color:var(--danger);"></i> إجابة قصيرة</div>
+            <div><input type="number" name="sa_count" class="form-control form-control-sm" value="2" min="0" max="20"></div>
+            <div><input type="number" name="sa_score" class="form-control form-control-sm" value="3" min="0.5" max="10" step="0.5"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ Step 3: Custom Instructions & Smart Chips ============ -->
+<div class="ai-step" id="step-3">
+    <div class="d-flex align-items-center mb-3">
+        <span class="step-number">3</span>
+        <span class="step-title">توجيهات إضافية للذكاء الاصطناعي</span>
+        <span class="badge bg-danger bg-opacity-10 text-danger ms-2" style="font-size:0.7rem;">جديد</span>
+    </div>
+
+    <div class="mb-3">
+        <textarea class="form-control" name="custom_instructions" id="custom-instructions"
+                  rows="3" placeholder="اكتب هنا توجيهات إضافية للذكاء الاصطناعي... (اختياري)&#10;مثال: ركز على الفصل الثالث، وتجاهل المقدمة."
+                  style="resize:vertical;min-height:80px;"></textarea>
+        <small class="text-muted mt-1 d-block">
+            <i class="bi bi-info-circle me-1"></i>
+            التوجيهات تساعد AI على فهم احتياجاتك بشكل أفضل
+        </small>
+    </div>
+
+    <!-- Smart Chips / Suggestions -->
+    <div>
+        <label class="form-label fw-semibold" style="font-size:0.85rem;">
+            <i class="bi bi-lightbulb me-1" style="color:var(--warning);"></i>اقتراحات ذكية
+            <small class="text-muted fw-normal">(انقر لإضافتها)</small>
+        </label>
+        <div class="smart-chips">
+            <button type="button" class="smart-chip" onclick="addChip(this, 'اشرح بأسلوب مبسط مع أمثلة من الواقع')">
+                <i class="bi bi-emoji-smile me-1"></i>للمبتدئين
+            </button>
+            <button type="button" class="smart-chip" onclick="addChip(this, 'ركز على النقاط الرئيسية والتعاريف فقط')">
+                <i class="bi bi-bookmark me-1"></i>للمراجعة
+            </button>
+            <button type="button" class="smart-chip" onclick="addChip(this, 'استخرج جميع القوانين الرياضية والمعادلات في جدول منظم')">
+                <i class="bi bi-calculator me-1"></i>للمعادلات
+            </button>
+            <button type="button" class="smart-chip" onclick="addChip(this, 'ترجم المصطلحات الصعبة إلى الإنجليزية مع الشرح')">
+                <i class="bi bi-translate me-1"></i>ترجمة المصطلحات
+            </button>
+            <button type="button" class="smart-chip" onclick="addChip(this, 'ركز على التعاريف والمفاهيم الأساسية')">
+                <i class="bi bi-journal-text me-1"></i>التعاريف
+            </button>
+            <button type="button" class="smart-chip" onclick="addChip(this, 'اشرح بأمثلة عملية وتطبيقية')">
+                <i class="bi bi-tools me-1"></i>أمثلة عملية
+            </button>
+            <button type="button" class="smart-chip" onclick="addChip(this, 'لخص في نقاط مرتبة ومختصرة')">
+                <i class="bi bi-list-ol me-1"></i>نقاط مختصرة
+            </button>
+            <button type="button" class="smart-chip" onclick="addChip(this, 'أنشئ أسئلة بمستوى صعب تحتاج تفكير عميق')">
+                <i class="bi bi-fire me-1"></i>مستوى صعب
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Submit Button -->
+<div class="text-center mt-4">
+    <button type="submit" class="btn btn-primary btn-lg px-5" id="submit-btn" style="border-radius:var(--radius);box-shadow:var(--shadow-md);">
+        <i class="bi bi-stars me-2"></i>
+        <span id="submit-text">بدء التلخيص</span>
+        <div class="spinner-border spinner-border-sm ms-2 d-none" id="submit-spinner" role="status"></div>
+    </button>
+    <p class="text-muted mt-2" style="font-size:0.8rem;">
+        <i class="bi bi-shield-check me-1"></i>
+        سيتم حفظ النتيجة تلقائياً كملف Markdown قابل للتحميل
+    </p>
+</div>
+
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// === Action Selection ===
+function selectAction(el, action) {
+    document.querySelectorAll('.action-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('action-type').value = action;
+
+    // Show/hide quiz config
+    const quizConfig = document.getElementById('quiz-config');
+    quizConfig.style.display = action === 'quiz' ? 'block' : 'none';
+
+    // Update submit button text
+    const submitText = document.getElementById('submit-text');
+    const textMap = {
+        'summarize': 'بدء التلخيص',
+        'chat': 'بدء الدردشة',
+        'quiz': 'توليد الأسئلة'
+    };
+    submitText.textContent = textMap[action] || 'بدء المعالجة';
+}
+
+// === Smart Chips ===
+function addChip(el, text) {
+    const textarea = document.getElementById('custom-instructions');
+    const current = textarea.value.trim();
+
+    // Toggle chip state
+    if (el.classList.contains('active')) {
+        el.classList.remove('active');
+        // Remove this text from textarea
+        textarea.value = current.replace(text, '').replace(/\n\n+/g, '\n').trim();
+    } else {
+        el.classList.add('active');
+        textarea.value = current ? current + '\n' + text : text;
+    }
+
+    // Auto-expand textarea
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+// === Toggle All Files ===
+function toggleAllFiles() {
+    const checkboxes = document.querySelectorAll('#files-list input[type="checkbox"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+}
+
+// === Form Submission ===
+document.getElementById('ai-form').addEventListener('submit', function(e) {
+    const fileChecks = document.querySelectorAll('#files-list input[type="checkbox"]:checked');
+    if (fileChecks.length === 0) {
+        e.preventDefault();
+        alert('يرجى اختيار ملف واحد على الأقل.');
+        return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    const spinner = document.getElementById('submit-spinner');
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+});
+
+// === Step highlighting ===
+document.addEventListener('DOMContentLoaded', function() {
+    const courseSelect = document.getElementById('course-select');
+    if (courseSelect) {
+        courseSelect.addEventListener('change', function() {
+            if (this.value) {
+                document.getElementById('step-1').classList.add('active-step');
+            } else {
+                document.getElementById('step-1').classList.remove('active-step');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

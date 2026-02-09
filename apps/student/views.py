@@ -18,7 +18,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db.models import (
     Count, Avg, Sum, Q, F, Value, IntegerField,
@@ -398,3 +398,275 @@ class UpdateProgressView(LoginRequiredMixin, StudentRequiredMixin, View):
         prog.save()
 
         return JsonResponse({'success': True, 'progress': prog.progress})
+
+
+# ========== Settings ==========
+
+class StudentSettingsView(LoginRequiredMixin, StudentRequiredMixin, View):
+    """إعدادات الطالب"""
+    template_name = 'student/settings.html'
+
+    def get(self, request):
+        context = {
+            'active_page': 'settings',
+            'user': request.user,
+            'active_tab': request.GET.get('tab', 'profile'),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        tab = request.POST.get('tab', 'profile')
+
+        if tab == 'profile':
+            full_name = request.POST.get('full_name', '').strip()
+            phone = request.POST.get('phone_number', '').strip()
+            email = request.POST.get('email', '').strip()
+
+            if full_name:
+                request.user.full_name = full_name
+            if phone:
+                request.user.phone_number = phone
+            if email:
+                request.user.email = email
+
+            if 'profile_picture' in request.FILES:
+                request.user.profile_picture = request.FILES['profile_picture']
+
+            request.user.save()
+            messages.success(request, 'تم تحديث البيانات الشخصية بنجاح.')
+
+        elif tab == 'password':
+            current_password = request.POST.get('current_password', '')
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+
+            if not request.user.check_password(current_password):
+                messages.error(request, 'كلمة المرور الحالية غير صحيحة.')
+            elif new_password != confirm_password:
+                messages.error(request, 'كلمة المرور الجديدة غير متطابقة.')
+            elif len(new_password) < 8:
+                messages.error(request, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل.')
+            else:
+                request.user.set_password(new_password)
+                request.user.save()
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, request.user)
+                messages.success(request, 'تم تغيير كلمة المرور بنجاح.')
+
+        elif tab == 'notifications':
+            messages.success(request, 'تم حفظ إعدادات الإشعارات.')
+
+        from django.urls import reverse
+        return redirect(reverse('student:settings') + f'?tab={tab}')
+
+
+# ========== Multi-Context AI Center ==========
+
+class MultiContextAIView(LoginRequiredMixin, StudentRequiredMixin, View):
+    """مركز الذكاء الاصطناعي المتقدم - Multi-Context Engine"""
+    template_name = 'ai_features/multi_context_select.html'
+
+    def get(self, request):
+        courses = Course.objects.get_current_courses_for_student(request.user)
+        remaining = AIUsageLog.get_remaining_requests(request.user)
+
+        context = {
+            'active_page': 'ai_center',
+            'courses': courses,
+            'remaining_requests': remaining,
+        }
+        return render(request, self.template_name, context)
+
+
+class MultiContextProcessView(LoginRequiredMixin, StudentRequiredMixin, View):
+    """معالجة طلب AI متعدد السياقات"""
+
+    def post(self, request):
+        from django.urls import reverse
+
+        file_ids = request.POST.getlist('file_ids')
+        action_type = request.POST.get('action_type', 'summarize')
+        custom_instructions = request.POST.get('custom_instructions', '').strip()
+
+        # Quiz config
+        mcq_count = int(request.POST.get('mcq_count', 0))
+        mcq_score = float(request.POST.get('mcq_score', 2.0))
+        tf_count = int(request.POST.get('tf_count', 0))
+        tf_score = float(request.POST.get('tf_score', 1.0))
+        sa_count = int(request.POST.get('sa_count', 0))
+        sa_score = float(request.POST.get('sa_score', 3.0))
+
+        if not file_ids:
+            messages.error(request, 'يرجى اختيار ملف واحد على الأقل.')
+            return redirect('student:ai_center')
+
+        if not AIUsageLog.check_rate_limit(request.user):
+            messages.error(request, 'تجاوزت الحد المسموح. حاول بعد ساعة.')
+            return redirect('student:ai_center')
+
+        try:
+            from apps.ai_features.services import GeminiService, QuestionMatrixConfig
+
+            files = LectureFile.objects.filter(
+                pk__in=file_ids, is_deleted=False, is_visible=True
+            )
+
+            if not files.exists():
+                messages.error(request, 'الملفات المحددة غير متاحة.')
+                return redirect('student:ai_center')
+
+            service = GeminiService()
+
+            # تجميع النصوص من الملفات المختارة
+            aggregated_text = ""
+            file_titles = []
+            for f in files:
+                text = service.extract_text_from_file(f)
+                if text:
+                    aggregated_text += f"\n\n--- [{f.title}] ---\n\n{text}"
+                    file_titles.append(f.title)
+
+            if not aggregated_text.strip():
+                messages.error(request, 'لم نتمكن من استخراج النص من الملفات المحددة.')
+                return redirect('student:ai_center')
+
+            first_file = files.first()
+
+            if action_type == 'summarize':
+                job = AIGenerationJob.objects.create(
+                    instructor=request.user, file=first_file,
+                    job_type='summary', user_notes=custom_instructions,
+                    status='processing'
+                )
+                result = service.generate_summary(
+                    aggregated_text, user_notes=custom_instructions
+                )
+                md_path = service.storage.save_summary(
+                    file_id=first_file.id, content=result,
+                    metadata={
+                        'source_files': ', '.join(file_titles),
+                        'custom_instructions': custom_instructions[:200] if custom_instructions else 'بدون',
+                        'model': service._model_name,
+                    }
+                )
+                job.status = 'completed'
+                job.md_file_path = md_path
+                job.completed_at = timezone.now()
+                job.save()
+
+                AIUsageLog.log_request(
+                    user=request.user, request_type='summary',
+                    file=first_file, success=True
+                )
+                messages.success(request, 'تم توليد الملخص بنجاح!')
+
+            elif action_type == 'chat':
+                question = custom_instructions or 'اشرح المحتوى الرئيسي لهذه الملفات'
+                answer = service.ask_document(aggregated_text, question)
+
+                AIChat.objects.create(
+                    file=first_file, user=request.user,
+                    question=question, answer=answer,
+                )
+                AIUsageLog.log_request(
+                    user=request.user, request_type='chat',
+                    file=first_file, success=True
+                )
+                messages.success(request, 'تم الحصول على الإجابة!')
+
+            elif action_type == 'quiz':
+                total_q = mcq_count + tf_count + sa_count
+                if total_q == 0:
+                    mcq_count, tf_count, sa_count = 3, 2, 2
+                    total_q = 7
+
+                matrix = QuestionMatrixConfig(
+                    mcq_count=mcq_count, mcq_score=mcq_score,
+                    true_false_count=tf_count, true_false_score=tf_score,
+                    short_answer_count=sa_count, short_answer_score=sa_score,
+                )
+                job = AIGenerationJob.objects.create(
+                    instructor=request.user, file=first_file,
+                    job_type='questions', user_notes=custom_instructions,
+                    config=matrix.to_dict(), status='processing'
+                )
+                questions = service.generate_questions_matrix(
+                    aggregated_text, matrix, custom_instructions
+                )
+                if questions:
+                    md_path = service.storage.save_questions(
+                        file_id=first_file.id, questions_data=questions,
+                        metadata={
+                            'source_files': ', '.join(file_titles),
+                            'total_questions': str(len(questions)),
+                            'total_score': str(matrix.total_score),
+                            'model': service._model_name,
+                        }
+                    )
+                    job.status = 'completed'
+                    job.md_file_path = md_path
+                    job.completed_at = timezone.now()
+                    job.save()
+
+                    for q in questions:
+                        AIGeneratedQuestion.objects.create(
+                            file=first_file, user=request.user,
+                            question_text=q.get('question', ''),
+                            question_type=q.get('type', 'short_answer'),
+                            options=q.get('options'),
+                            correct_answer=q.get('answer', ''),
+                            explanation=q.get('explanation', ''),
+                            score=q.get('score', 1.0),
+                        )
+
+                    AIUsageLog.log_request(
+                        user=request.user, request_type='questions',
+                        file=first_file, success=True
+                    )
+                    messages.success(request, f'تم توليد {len(questions)} سؤال بنجاح!')
+                else:
+                    job.status = 'failed'
+                    job.error_message = 'لم يتمكن AI من توليد أسئلة'
+                    job.save()
+                    messages.warning(request, 'لم يتمكن الذكاء الاصطناعي من توليد أسئلة.')
+
+        except Exception as e:
+            logger.error(f"Multi-Context AI error: {e}")
+            messages.error(request, f'حدث خطأ: {str(e)[:150]}')
+
+        return redirect('student:ai_center')
+
+
+class CourseFilesAjaxStudentView(LoginRequiredMixin, StudentRequiredMixin, View):
+    """إرجاع قائمة ملفات المقرر للطالب (AJAX/HTMX)"""
+    def get(self, request):
+        course_id = request.GET.get('course_id')
+        if not course_id:
+            return JsonResponse({'files': []})
+
+        files = LectureFile.objects.filter(
+            course_id=course_id, is_deleted=False, is_visible=True
+        ).values('id', 'title', 'file_type')
+
+        if request.headers.get('HX-Request'):
+            # Return HTML checkboxes for HTMX
+            files_list = list(files)
+            html = ''
+            for f in files_list:
+                icon = 'bi-file-earmark-pdf' if 'pdf' in f.get('file_type', '').lower() else 'bi-file-earmark'
+                html += f'''
+                <div class="form-check d-flex align-items-center gap-2 py-2 px-3"
+                     style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                    <input class="form-check-input" type="checkbox" name="file_ids"
+                           value="{f['id']}" id="file_{f['id']}">
+                    <label class="form-check-label d-flex align-items-center gap-2 w-100" for="file_{f['id']}">
+                        <i class="bi {icon}" style="color:var(--primary);"></i>
+                        <span>{f['title']}</span>
+                        <span class="badge bg-light text-muted ms-auto" style="font-size:0.7rem;">{f['file_type']}</span>
+                    </label>
+                </div>'''
+            if not html:
+                html = '<div class="text-center text-muted py-3"><i class="bi bi-inbox me-1"></i>لا توجد ملفات متاحة</div>'
+            return HttpResponse(html)
+
+        return JsonResponse({'files': list(files)})

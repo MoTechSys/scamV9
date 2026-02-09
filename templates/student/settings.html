@@ -1,0 +1,226 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}الإعدادات - S-ACM{% endblock %}
+{% block page_title %}الإعدادات{% endblock %}
+
+{% block extra_styles %}
+.settings-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: var(--bg-body, #f1f5f9);
+    border-radius: var(--radius, 12px);
+    margin-bottom: 24px;
+}
+.settings-tab {
+    flex: 1;
+    text-align: center;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-secondary, #64748b);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+.settings-tab:hover {
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--primary, #6366f1);
+}
+.settings-tab.active {
+    background: var(--bg-card, #fff);
+    color: var(--primary, #6366f1);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+}
+.avatar-large {
+    width: 80px; height: 80px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+}
+@media (max-width: 767.98px) {
+    .settings-tabs { flex-direction: column; gap: 2px; }
+    .settings-tab { padding: 10px 12px; font-size: 0.85rem; }
+}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="settings-tabs">
+    <a href="?tab=profile" class="settings-tab {% if active_tab == 'profile' %}active{% endif %}">
+        <i class="bi bi-person"></i><span>الملف الشخصي</span>
+    </a>
+    <a href="?tab=password" class="settings-tab {% if active_tab == 'password' %}active{% endif %}">
+        <i class="bi bi-key"></i><span>كلمة المرور</span>
+    </a>
+    <a href="?tab=notifications" class="settings-tab {% if active_tab == 'notifications' %}active{% endif %}">
+        <i class="bi bi-bell"></i><span>الإشعارات</span>
+    </a>
+    <a href="?tab=account" class="settings-tab {% if active_tab == 'account' %}active{% endif %}">
+        <i class="bi bi-shield-lock"></i><span>الحساب</span>
+    </a>
+</div>
+
+<!-- ============ PROFILE ============ -->
+{% if active_tab == 'profile' %}
+<div class="card">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-person me-2" style="color:var(--primary);"></i>البيانات الشخصية</h5>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="profile">
+            <div class="text-center mb-4">
+                {% if user.profile_picture %}
+                <img src="{{ user.profile_picture.url }}" alt="صورة" class="rounded-circle mb-2" style="width:80px;height:80px;object-fit:cover;">
+                {% else %}
+                <div class="avatar-large mx-auto mb-2">{{ user.full_name|slice:":1"|upper }}</div>
+                {% endif %}
+                <div><input type="file" name="profile_picture" class="form-control form-control-sm" accept="image/*" style="max-width:300px;margin:8px auto;"></div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold"><i class="bi bi-person me-1"></i>الاسم الكامل</label>
+                    <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold"><i class="bi bi-hash me-1"></i>الرقم الأكاديمي</label>
+                    <input type="text" class="form-control" value="{{ user.academic_id }}" disabled>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold"><i class="bi bi-envelope me-1"></i>البريد الإلكتروني</label>
+                    <input type="email" name="email" class="form-control" value="{{ user.email|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold"><i class="bi bi-telephone me-1"></i>رقم الهاتف</label>
+                    <input type="text" name="phone_number" class="form-control" value="{{ user.phone_number|default:'' }}" dir="ltr">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold"><i class="bi bi-mortarboard me-1"></i>التخصص</label>
+                    <input type="text" class="form-control" value="{{ user.major|default:'غير محدد' }}" disabled>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold"><i class="bi bi-layers me-1"></i>المستوى</label>
+                    <input type="text" class="form-control" value="{{ user.level|default:'غير محدد' }}" disabled>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>حفظ التغييرات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============ PASSWORD ============ -->
+{% elif active_tab == 'password' %}
+<div class="card">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-key me-2" style="color:var(--primary);"></i>تغيير كلمة المرور</h5>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="password">
+            <div class="row g-3" style="max-width:500px;">
+                <div class="col-12">
+                    <label class="form-label fw-semibold">كلمة المرور الحالية</label>
+                    <input type="password" name="current_password" class="form-control" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">كلمة المرور الجديدة</label>
+                    <input type="password" name="new_password" class="form-control" required minlength="8">
+                    <small class="text-muted">8 أحرف على الأقل</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">تأكيد كلمة المرور الجديدة</label>
+                    <input type="password" name="confirm_password" class="form-control" required>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>تغيير كلمة المرور</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============ NOTIFICATIONS ============ -->
+{% elif active_tab == 'notifications' %}
+<div class="card">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-bell me-2" style="color:var(--primary);"></i>إعدادات الإشعارات</h5>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="notifications">
+            <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">إشعارات المحتوى الجديد</h6><small class="text-muted">إشعار عند رفع ملف جديد في مقرراتك</small></div>
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked></div>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">إشعارات الواجبات</h6><small class="text-muted">تذكير بالواجبات والمواعيد النهائية</small></div>
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked></div>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">إشعارات الدرجات</h6><small class="text-muted">إشعار عند نشر درجات جديدة</small></div>
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked></div>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">إشعارات النظام</h6><small class="text-muted">تحديثات النظام والصيانة</small></div>
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked></div>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">إشعارات البريد الإلكتروني</h6><small class="text-muted">إرسال نسخة من الإشعارات إلى بريدك</small></div>
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox"></div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>حفظ الإعدادات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============ ACCOUNT ============ -->
+{% elif active_tab == 'account' %}
+<div class="card">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-shield-lock me-2" style="color:var(--primary);"></i>معلومات الحساب</h5>
+        <div class="list-group list-group-flush">
+            <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">الرقم الأكاديمي</h6></div>
+                <span class="text-muted">{{ user.academic_id }}</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">الدور</h6></div>
+                <span class="badge bg-primary">{{ user.get_role_display }}</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">التخصص</h6></div>
+                <span class="text-muted">{{ user.major|default:"غير محدد" }}</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">المستوى</h6></div>
+                <span class="text-muted">{{ user.level|default:"غير محدد" }}</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">حالة الحساب</h6></div>
+                <span class="badge bg-success">{{ user.get_account_status_display }}</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">تاريخ الانضمام</h6></div>
+                <span class="text-muted">{{ user.date_joined|date:"Y/m/d" }}</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                <div><h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">آخر تسجيل دخول</h6></div>
+                <span class="text-muted">{{ user.last_login|date:"Y/m/d H:i"|default:"لم يسجل دخول بعد" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
