@@ -10439,3 +10439,37 @@ Traceback (most recent call last):
   File "E:\v9\venv\Lib\site-packages\django\template\base.py", line 591, in unclosed_block_tag
     raise self.error(token, msg)
 django.template.exceptions.TemplateSyntaxError: Unclosed tag on line 438: 'if'. Looking for one of: endif.
+[2026-02-09 02:26:18] ERROR [django.request:253] Internal Server Error: /notifications/instructor/create/
+Traceback (most recent call last):
+  File "E:\v9\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\v9\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\v9\venv\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\v9\venv\Lib\site-packages\django\contrib\auth\mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\v9\venv\Lib\site-packages\django\contrib\auth\mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\v9\venv\Lib\site-packages\django\views\generic\base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "E:\v9\venv\Lib\site-packages\django\views\generic\edit.py", line 178, in get
+    return super().get(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\v9\venv\Lib\site-packages\django\views\generic\edit.py", line 142, in get
+    return self.render_to_response(self.get_context_data())
+                                   ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\v9\apps\notifications\views\instructor.py", line 34, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "E:\v9\venv\Lib\site-packages\django\views\generic\edit.py", line 72, in get_context_data
+    kwargs["form"] = self.get_form()
+                     ~~~~~~~~~~~~~^^
+  File "E:\v9\venv\Lib\site-packages\django\views\generic\edit.py", line 37, in get_form
+    return form_class(**self.get_form_kwargs())
+  File "E:\v9\apps\notifications\forms.py", line 74, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+TypeError: BaseForm.__init__() got an unexpected keyword argument 'instance'

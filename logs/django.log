@@ -6133,3 +6133,61 @@
 [2026-02-09 01:56:31] INFO [django.server:213] "POST /accounts/login/ HTTP/1.1" 302 0
 [2026-02-09 01:56:32] INFO [django.server:213] "GET /dashboard/ HTTP/1.1" 302 0
 [2026-02-09 01:56:32] ERROR [django.server:213] "GET /student/dashboard/ HTTP/1.1" 500 206879
+[2026-02-09 02:25:03] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
+[2026-02-09 02:25:10] INFO [django.server:213] "GET / HTTP/1.1" 200 8435
+[2026-02-09 02:25:10] WARNING [django.server:213] "GET /favicon.ico HTTP/1.1" 404 4900
+[2026-02-09 02:25:12] INFO [django.server:213] "GET /accounts/login/ HTTP/1.1" 200 2992
+[2026-02-09 02:25:30] INFO [django.server:213] "POST /accounts/login/ HTTP/1.1" 302 0
+[2026-02-09 02:25:30] INFO [django.server:213] "GET /dashboard/ HTTP/1.1" 302 0
+[2026-02-09 02:25:30] INFO [django.server:213] "GET /instructor/dashboard/ HTTP/1.1" 200 22884
+[2026-02-09 02:25:37] INFO [django.server:213] "GET /instructor/courses/ HTTP/1.1" 200 18907
+[2026-02-09 02:25:38] INFO [django.server:213] "GET /instructor/trash/ HTTP/1.1" 200 17464
+[2026-02-09 02:25:39] INFO [django.server:213] "GET /instructor/ai/ HTTP/1.1" 200 23997
+[2026-02-09 02:25:42] INFO [django.server:213] "GET /instructor/courses/ HTTP/1.1" 200 18907
+[2026-02-09 02:25:43] INFO [django.server:213] "GET /instructor/dashboard/ HTTP/1.1" 200 22445
+[2026-02-09 02:25:45] INFO [django.server:213] "GET /instructor/trash/ HTTP/1.1" 200 17464
+[2026-02-09 02:25:59] INFO [django.server:213] "GET /instructor/courses/ HTTP/1.1" 200 18907
+[2026-02-09 02:26:05] INFO [django.server:213] "GET /instructor/courses/3/ HTTP/1.1" 200 20341
+[2026-02-09 02:26:13] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 6063
+[2026-02-09 02:26:13] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 02:26:16] INFO [django.server:213] "GET /courses/instructor/ HTTP/1.1" 200 13506
+[2026-02-09 02:26:16] INFO [django.server:213] "GET /static/js/instructor-panel.js HTTP/1.1" 200 1568
+[2026-02-09 02:26:16] INFO [django.server:213] "GET /static/vendor/bootstrap/bootstrap.bundle.min.js HTTP/1.1" 200 80663
+[2026-02-09 02:26:16] INFO [django.server:213] "GET /static/vendor/bootstrap/bootstrap.rtl.min.css HTTP/1.1" 200 167209
+[2026-02-09 02:26:16] INFO [django.server:213] "GET /static/css/instructor-panel.css HTTP/1.1" 200 7993
+[2026-02-09 02:26:18] ERROR [django.server:213] "GET /notifications/instructor/create/ HTTP/1.1" 500 124938
+[2026-02-09 02:26:53] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 02:28:21] INFO [django.server:213] "GET /instructor/courses/ HTTP/1.1" 200 18907
+[2026-02-09 02:28:26] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 22114
+[2026-02-09 02:28:33] INFO [django.server:213] "POST /instructor/files/bulk-action/ HTTP/1.1" 302 0
+[2026-02-09 02:28:33] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 22573
+[2026-02-09 02:28:33] INFO [django.utils.autoreload:265] E:\v9\apps\courses\urls.py changed, reloading.
+[2026-02-09 02:28:36] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
+[2026-02-09 02:28:48] INFO [django.server:213] "POST /instructor/files/bulk-action/ HTTP/1.1" 302 0
+[2026-02-09 02:28:48] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 22536
+[2026-02-09 02:29:16] INFO [django.server:213] "POST /instructor/files/bulk-action/ HTTP/1.1" 302 0
+[2026-02-09 02:29:16] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 22513
+[2026-02-09 02:29:23] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 22068
+[2026-02-09 02:30:00] INFO [django.server:213] "GET / HTTP/1.1" 302 0
+[2026-02-09 02:30:00] INFO [django.server:213] "GET /dashboard/ HTTP/1.1" 302 0
+[2026-02-09 02:30:00] INFO [django.server:213] "GET /student/dashboard/ HTTP/1.1" 200 18242
+[2026-02-09 02:30:00] WARNING [django.server:213] "GET /favicon.ico HTTP/1.1" 404 4900
+[2026-02-09 02:30:06] INFO [django.server:213] "GET /student/courses/ HTTP/1.1" 200 15810
+[2026-02-09 02:30:08] INFO [django.server:213] "GET /student/courses/5/ HTTP/1.1" 200 15577
+[2026-02-09 02:30:23] INFO [django.server:213] "POST /instructor/files/bulk-action/ HTTP/1.1" 302 0
+[2026-02-09 02:30:23] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 22527
+[2026-02-09 02:30:33] INFO [django.server:213] "POST /instructor/files/bulk-action/ HTTP/1.1" 302 0
+[2026-02-09 02:30:33] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 22536
+[2026-02-09 02:30:36] INFO [django.server:213] "GET /student/courses/5/ HTTP/1.1" 200 16219
+[2026-02-09 02:30:44] INFO [django.server:213] "POST /instructor/files/bulk-action/ HTTP/1.1" 302 0
+[2026-02-09 02:30:44] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 22559
+[2026-02-09 02:30:47] INFO [django.server:213] "GET /student/courses/5/ HTTP/1.1" 200 16787
+[2026-02-09 02:31:07] INFO [django.server:213] "POST /instructor/files/5/delete/ HTTP/1.1" 302 0
+[2026-02-09 02:31:08] INFO [django.server:213] "GET /instructor/courses/5/ HTTP/1.1" 200 20789
+[2026-02-09 02:31:10] INFO [django.server:213] "GET /student/courses/5/ HTTP/1.1" 200 16218
+[2026-02-09 02:31:13] INFO [django.server:213] "GET /instructor/trash/ HTTP/1.1" 200 18566
+[2026-02-09 02:31:15] INFO [django.server:213] "POST /instructor/trash/5/restore/ HTTP/1.1" 302 0
+[2026-02-09 02:31:15] INFO [django.server:213] "GET /instructor/trash/ HTTP/1.1" 200 17925
+[2026-02-09 02:31:18] INFO [django.server:213] "GET /student/courses/5/ HTTP/1.1" 200 16787
+[2026-02-09 03:01:55] INFO [django.utils.autoreload:265] E:\v9\apps\courses\urls.py changed, reloading.
+[2026-02-09 03:01:57] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
