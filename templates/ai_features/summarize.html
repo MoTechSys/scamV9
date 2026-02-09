@@ -1,0 +1,100 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}تلخيص - {{ file.title }} - S-ACM{% endblock %}
+
+{% block page_title %}تلخيص بالذكاء الاصطناعي{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{% url 'ai_features:usage_stats' %}">أدوات AI</a></li>
+        <li class="breadcrumb-item active">تلخيص</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row g-4">
+    <!-- File Info -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-file-earmark me-2"></i>معلومات الملف</h6>
+                <div class="mb-2"><strong>العنوان:</strong> {{ file.title }}</div>
+                <div class="mb-2"><strong>المقرر:</strong> {{ file.course }}</div>
+                <div class="mb-2"><strong>النوع:</strong> {{ file.file_extension }}</div>
+                <hr>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-lightning-charge text-warning"></i>
+                    <span>طلبات متبقية: <strong class="text-primary">{{ remaining_requests }}</strong></span>
+                </div>
+                {% if not existing_summary %}
+                <form method="post" id="summarizeForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary w-100 mt-3" id="generateBtn">
+                        <i class="bi bi-magic me-2"></i>توليد التلخيص
+                    </button>
+                </form>
+                {% else %}
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-primary w-100 mt-3">
+                        <i class="bi bi-arrow-repeat me-2"></i>إعادة التلخيص
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Result -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>الملخص</h6>
+                {% if existing_summary %}
+                <small class="text-muted">{{ existing_summary.generated_at|timesince }} مضت</small>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if existing_summary %}
+                <div class="summary-content" style="line-height:1.9;font-size:0.95rem;">
+                    {{ existing_summary.summary_text|linebreaksbr }}
+                </div>
+                <hr>
+                <div class="d-flex gap-3 text-muted small">
+                    <span><i class="bi bi-hash me-1"></i>{{ existing_summary.word_count }} كلمة</span>
+                    <span><i class="bi bi-cpu me-1"></i>{{ existing_summary.model_used }}</span>
+                    <span><i class="bi bi-translate me-1"></i>{{ existing_summary.language }}</span>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <h5>لم يتم إنشاء ملخص بعد</h5>
+                    <p class="text-muted">اضغط "توليد التلخيص" لإنشاء ملخص ذكي لهذا الملف</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;">
+        <div class="spinner-border text-light mb-3" style="width:3rem;height:3rem;"></div>
+        <h5>جاري التلخيص بالذكاء الاصطناعي...</h5>
+        <p class="text-light opacity-75">قد يستغرق هذا بضع ثوانٍ</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('summarizeForm')?.addEventListener('submit', function() {
+    document.getElementById('loadingOverlay').style.display = 'block';
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('generateBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري التلخيص...';
+});
+</script>
+{% endblock %}

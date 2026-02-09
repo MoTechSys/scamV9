@@ -1,0 +1,126 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}توليد أسئلة - {{ file.title }} - S-ACM{% endblock %}
+
+{% block page_title %}بنك الأسئلة - الذكاء الاصطناعي{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{% url 'ai_features:usage_stats' %}">أدوات AI</a></li>
+        <li class="breadcrumb-item active">أسئلة</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row g-4">
+    <!-- Config Panel -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-gear me-2"></i>إعدادات التوليد</h6>
+                <div class="mb-2"><strong>الملف:</strong> {{ file.title|truncatechars:30 }}</div>
+                <div class="mb-3"><strong>المقرر:</strong> {{ file.course }}</div>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-lightning-charge text-warning"></i>
+                    <span>طلبات متبقية: <strong class="text-primary">{{ remaining_requests }}</strong></span>
+                </div>
+                <hr>
+                <form method="post" id="questionsForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">نوع الأسئلة</label>
+                        <select name="question_type" class="form-select">
+                            <option value="mixed">مختلط (الكل)</option>
+                            <option value="mcq">اختيار من متعدد</option>
+                            <option value="true_false">صح وخطأ</option>
+                            <option value="short_answer">إجابة قصيرة</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">عدد الأسئلة</label>
+                        <input type="number" name="num_questions" class="form-control" value="5" min="1" max="20">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="generateBtn">
+                        <i class="bi bi-magic me-2"></i>توليد الأسئلة
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Questions -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-question-circle me-2"></i>الأسئلة المولدة ({{ questions|length }})</h6>
+            </div>
+            <div class="card-body">
+                {% if questions %}
+                    {% for q in questions %}
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="fw-bold mb-0">سؤال {{ forloop.counter }}</h6>
+                            <div>
+                                {% if q.question_type == 'mcq' %}
+                                    <span class="badge bg-primary">اختيار من متعدد</span>
+                                {% elif q.question_type == 'true_false' %}
+                                    <span class="badge bg-info">صح وخطأ</span>
+                                {% else %}
+                                    <span class="badge bg-success">إجابة قصيرة</span>
+                                {% endif %}
+                                {% if q.difficulty_level %}
+                                    <span class="badge bg-secondary">{{ q.difficulty_level }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="mb-2">{{ q.question_text }}</p>
+                        {% if q.options %}
+                        <div class="ms-3 mb-2">
+                            {% for opt in q.options %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" disabled>
+                                <label class="form-check-label">{{ opt }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <small class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>الإجابة: {{ q.correct_answer }}</small>
+                            {% if q.explanation %}
+                            <br><small class="text-muted"><i class="bi bi-info-circle me-1"></i>{{ q.explanation }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-question-circle"></i>
+                    <h5>لا توجد أسئلة بعد</h5>
+                    <p class="text-muted">اختر إعدادات التوليد ثم اضغط "توليد الأسئلة"</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;">
+        <div class="spinner-border text-light mb-3" style="width:3rem;height:3rem;"></div>
+        <h5>جاري توليد الأسئلة...</h5>
+        <p class="text-light opacity-75">يتم تحليل المحتوى وإنشاء أسئلة ذكية</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('questionsForm')?.addEventListener('submit', function() {
+    document.getElementById('loadingOverlay').style.display = 'block';
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('generateBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري التوليد...';
+});
+</script>
+{% endblock %}

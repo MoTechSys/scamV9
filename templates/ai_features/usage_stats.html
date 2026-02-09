@@ -1,0 +1,140 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}إحصائيات استخدام AI - S-ACM{% endblock %}
+
+{% block page_title %}إحصائيات الذكاء الاصطناعي{% endblock %}
+
+{% block dashboard_content %}
+<div class="row g-4 mb-4">
+    <!-- Stat Cards -->
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card bg-gradient-primary">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">الاستخدام هذه الساعة</div>
+                    <div class="stat-value">{{ stats.hourly_usage }}</div>
+                    <small>من {{ stats.rate_limit }} متاح</small>
+                </div>
+                <i class="bi bi-clock-history stat-icon"></i>
+            </div>
+            <div class="progress mt-2" style="height:4px;background:rgba(255,255,255,0.2);">
+                <div class="progress-bar bg-white" style="width:{% widthratio stats.hourly_usage stats.rate_limit 100 %}%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card bg-gradient-success">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">الاستخدام اليوم</div>
+                    <div class="stat-value">{{ stats.daily_usage }}</div>
+                    <small>طلب</small>
+                </div>
+                <i class="bi bi-calendar-check stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card bg-gradient-info">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">إجمالي الملخصات</div>
+                    <div class="stat-value">{{ stats.total_summaries }}</div>
+                </div>
+                <i class="bi bi-file-earmark-text stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card bg-gradient-warning">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">إجمالي الأسئلة</div>
+                    <div class="stat-value">{{ stats.total_questions }}</div>
+                </div>
+                <i class="bi bi-question-circle stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chat Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card p-4 text-center">
+            <i class="bi bi-chat-dots text-primary mb-2" style="font-size:2rem;"></i>
+            <h3 class="fw-bold">{{ stats.total_chats }}</h3>
+            <span class="text-muted">إجمالي المحادثات</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-4 text-center">
+            <i class="bi bi-speedometer2 text-success mb-2" style="font-size:2rem;"></i>
+            <h3 class="fw-bold">{{ stats.rate_limit }}</h3>
+            <span class="text-muted">الحد المسموح/ساعة</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-4 text-center">
+            <i class="bi bi-lightning-charge text-warning mb-2" style="font-size:2rem;"></i>
+            <h3 class="fw-bold">{% widthratio stats.hourly_usage stats.rate_limit 100 %}%</h3>
+            <span class="text-muted">نسبة الاستخدام</span>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Usage -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>آخر الاستخدامات</h6>
+    </div>
+    <div class="card-body">
+        {% if recent_usage %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>النوع</th>
+                        <th>الملف</th>
+                        <th>التوكنات</th>
+                        <th>الحالة</th>
+                        <th>الوقت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usage in recent_usage %}
+                    <tr>
+                        <td>
+                            {% if usage.request_type == 'summary' %}
+                                <span class="badge bg-info"><i class="bi bi-file-text me-1"></i>تلخيص</span>
+                            {% elif usage.request_type == 'questions' %}
+                                <span class="badge bg-warning"><i class="bi bi-question-circle me-1"></i>أسئلة</span>
+                            {% else %}
+                                <span class="badge bg-primary"><i class="bi bi-chat me-1"></i>محادثة</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ usage.file.title|default:"-"|truncatechars:30 }}</td>
+                        <td><span class="text-muted">{{ usage.tokens_used }}</span></td>
+                        <td>
+                            {% if usage.success %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ usage.request_time|timesince }} مضت</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-robot"></i>
+            <h5>لا يوجد استخدام بعد</h5>
+            <p class="text-muted">ابدأ باستخدام أدوات الذكاء الاصطناعي من صفحات المقررات</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
