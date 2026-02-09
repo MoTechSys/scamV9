@@ -26,8 +26,8 @@ ENV/
 env/
 .venv/
 
-# Django
-#*.log
+ Django
+*.log
 3local_settings.py
 #db.sqlite3
 *.pot
@@ -46,9 +46,9 @@ env/
 #.env.production
 #!.env.example
 
-# Logs
-#logs/
-#*.log
+ Logs
+logs/
+*.log
 
 # IDE
 .vscode/
