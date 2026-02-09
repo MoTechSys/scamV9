@@ -6133,6 +6133,7 @@
 [2026-02-09 01:56:31] INFO [django.server:213] "POST /accounts/login/ HTTP/1.1" 302 0
 [2026-02-09 01:56:32] INFO [django.server:213] "GET /dashboard/ HTTP/1.1" 302 0
 [2026-02-09 01:56:32] ERROR [django.server:213] "GET /student/dashboard/ HTTP/1.1" 500 206879
+<<<<<<< HEAD
 [2026-02-09 02:25:03] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
 [2026-02-09 02:25:10] INFO [django.server:213] "GET / HTTP/1.1" 200 8435
 [2026-02-09 02:25:10] WARNING [django.server:213] "GET /favicon.ico HTTP/1.1" 404 4900
@@ -6280,3 +6281,11 @@
 [2026-02-09 03:45:38] WARNING [django.server:213] "GET /notifications/instructor_sent HTTP/1.1" 404 7880
 [2026-02-09 03:51:03] INFO [django.utils.autoreload:265] E:\v9\apps\notifications\views\instructor.py changed, reloading.
 [2026-02-09 03:51:04] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
+=======
+[2026-02-09 03:28:30] INFO [django.utils.autoreload:681] Watching for file changes with StatReloader
+[2026-02-09 03:28:32] INFO [django.server:249] "GET / HTTP/1.1" 200 8435
+[2026-02-09 03:28:32] INFO [django.server:249] "GET /accounts/login/ HTTP/1.1" 200 2992
+[2026-02-09 03:28:32] INFO [django.server:249] "GET /instructor/dashboard/ HTTP/1.1" 302 0
+[2026-02-09 03:28:32] INFO [django.server:249] "GET /student/dashboard/ HTTP/1.1" 302 0
+[2026-02-09 03:28:32] INFO [django.server:249] "GET /notifications/ HTTP/1.1" 302 0
+>>>>>>> 4ae518e478b763a706d99e2ec90c000d9b8cc4f7

@@ -36,39 +36,29 @@
                 <ul class="navbar-nav me-auto">
                     {% if user.is_admin %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'accounts:admin_dashboard' %}">
+                        <a class="nav-link" href="/scam-admin/">
                             <i class="bi bi-speedometer2"></i> لوحة التحكم
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'accounts:admin_user_list' %}">
-                            <i class="bi bi-people"></i> المستخدمين
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'courses:admin_course_list' %}">
-                            <i class="bi bi-book"></i> المقررات
                         </a>
                     </li>
                     {% elif user.is_instructor %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'courses:instructor_dashboard' %}">
+                        <a class="nav-link" href="{% url 'instructor:dashboard' %}">
                             <i class="bi bi-speedometer2"></i> لوحة التحكم
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'courses:instructor_course_list' %}">
+                        <a class="nav-link" href="{% url 'instructor:course_list' %}">
                             <i class="bi bi-book"></i> مقرراتي
                         </a>
                     </li>
                     {% elif user.is_student %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'courses:student_dashboard' %}">
+                        <a class="nav-link" href="{% url 'student:dashboard' %}">
                             <i class="bi bi-speedometer2"></i> لوحة التحكم
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'courses:student_course_list' %}">
+                        <a class="nav-link" href="{% url 'student:course_list' %}">
                             <i class="bi bi-book"></i> مقرراتي
                         </a>
                     </li>
