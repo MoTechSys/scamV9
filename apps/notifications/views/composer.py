@@ -1,10 +1,14 @@
 """
-Composer Views - واجهة إنشاء وإرسال الإشعارات
+Composer Views - واجهة إنشاء وإرسال الإشعارات v3
 S-ACM - Smart Academic Content Management System
 
 Views:
 - ComposerView: إنشاء إشعار جديد (للدكتور والأدمن)
 - SentNotificationsView: قائمة الإشعارات المرسلة
+- HideSentNotificationView: إخفاء إشعار مرسل
+- UnhideSentNotificationView: إظهار إشعار مرسل
+- DeleteSentNotificationView: حذف إشعار مرسل (سلة المهملات)
+- RestoreSentNotificationView: استعادة إشعار مرسل من سلة المهملات
 """
 
 from django.shortcuts import render, redirect
@@ -12,11 +16,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.views import View
 from django.views.generic import ListView
+from django.http import HttpResponse
 
 from ..models import Notification
 from ..services import NotificationService
 from ..forms import ComposerForm
-from apps.accounts.views import AdminRequiredMixin, InstructorRequiredMixin
 
 
 class ComposerView(LoginRequiredMixin, View):
@@ -35,7 +39,7 @@ class ComposerView(LoginRequiredMixin, View):
     def get(self, request):
         if not self._check_permission(request):
             messages.error(request, 'ليس لديك صلاحية لإرسال إشعارات.')
-            return redirect('notifications:list')
+            return redirect('notifications:management')
 
         form = ComposerForm(
             user=request.user,
@@ -43,13 +47,14 @@ class ComposerView(LoginRequiredMixin, View):
         )
         return render(request, self.template_name, {
             'form': form,
-            'active_page': 'notification_create',
+            'active_page': 'notifications',
+            'active_section': 'compose',
         })
 
     def post(self, request):
         if not self._check_permission(request):
             messages.error(request, 'ليس لديك صلاحية لإرسال إشعارات.')
-            return redirect('notifications:list')
+            return redirect('notifications:management')
 
         form = ComposerForm(
             request.POST,
@@ -74,7 +79,8 @@ class ComposerView(LoginRequiredMixin, View):
                 messages.warning(request, 'لم يتم العثور على مستلمين بناءً على الفلاتر المحددة.')
                 return render(request, self.template_name, {
                     'form': form,
-                    'active_page': 'notification_create',
+                    'active_page': 'notifications',
+                    'active_section': 'compose',
                 })
 
             # إنشاء الإشعار
@@ -93,11 +99,12 @@ class ComposerView(LoginRequiredMixin, View):
                 request,
                 f'تم إرسال الإشعار "{data["title"]}" إلى {recipient_count} مستلم.'
             )
-            return redirect('notifications:sent')
+            return redirect('notifications:management')
 
         return render(request, self.template_name, {
             'form': form,
-            'active_page': 'notification_create',
+            'active_page': 'notifications',
+            'active_section': 'compose',
         })
 
 
@@ -115,5 +122,66 @@ class SentNotificationsView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['active_page'] = 'notification_sent'
+        context['active_page'] = 'notifications'
+        context['active_section'] = 'sent'
         return context
+
+
+class HideSentNotificationView(LoginRequiredMixin, View):
+    """إخفاء إشعار مرسل"""
+
+    def post(self, request, pk):
+        NotificationService.hide_sent_notification(pk, request.user)
+
+        if request.headers.get('HX-Request'):
+            return HttpResponse(status=204, headers={
+                'HX-Trigger': 'notificationsUpdated'
+            })
+
+        messages.success(request, 'تم إخفاء الإشعار.')
+        return redirect('notifications:management')
+
+
+class UnhideSentNotificationView(LoginRequiredMixin, View):
+    """إظهار إشعار مرسل"""
+
+    def post(self, request, pk):
+        NotificationService.unhide_sent_notification(pk, request.user)
+
+        if request.headers.get('HX-Request'):
+            return HttpResponse(status=204, headers={
+                'HX-Trigger': 'notificationsUpdated'
+            })
+
+        messages.success(request, 'تم إظهار الإشعار.')
+        return redirect('notifications:management')
+
+
+class DeleteSentNotificationView(LoginRequiredMixin, View):
+    """حذف إشعار مرسل - نقل إلى سلة المهملات"""
+
+    def post(self, request, pk):
+        NotificationService.soft_delete_sent(pk, request.user)
+
+        if request.headers.get('HX-Request'):
+            return HttpResponse(status=204, headers={
+                'HX-Trigger': 'notificationsUpdated'
+            })
+
+        messages.success(request, 'تم نقل الإشعار المرسل إلى سلة المهملات.')
+        return redirect('notifications:management')
+
+
+class RestoreSentNotificationView(LoginRequiredMixin, View):
+    """استعادة إشعار مرسل من سلة المهملات"""
+
+    def post(self, request, pk):
+        NotificationService.restore_sent_from_trash(pk, request.user)
+
+        if request.headers.get('HX-Request'):
+            return HttpResponse(status=204, headers={
+                'HX-Trigger': 'notificationsUpdated'
+            })
+
+        messages.success(request, 'تم استعادة الإشعار المرسل.')
+        return redirect('notifications:management')

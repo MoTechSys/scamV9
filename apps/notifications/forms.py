@@ -1,5 +1,5 @@
 """
-نماذج (Forms) لنظام الإشعارات v2
+نماذج (Forms) لنظام الإشعارات v3
 S-ACM - Smart Academic Content Management System
 
 === Forms ===
@@ -50,23 +50,39 @@ class ComposerForm(forms.Form):
     )
 
     # === المستهدفون ===
-    TARGET_CHOICES = [
-        ('course_students', 'طلاب مقرر محدد'),
-        ('major_students', 'طلاب تخصص ومستوى'),
+    RECIPIENT_TYPE_CHOICES = [
+        ('students', 'الطلاب'),
+        ('instructors', 'الدكاترة'),
+    ]
+
+    STUDENT_TARGET_CHOICES = [
         ('all_students', 'جميع الطلاب'),
-        ('all_instructors', 'جميع المدرسين'),
-        ('everyone', 'الجميع'),
+        ('major_students', 'حسب التخصص والمستوى'),
+        ('course_students', 'طلاب مقرر محدد'),
         ('specific_student', 'طالب محدد'),
     ]
 
-    target_type = forms.ChoiceField(
-        label='نوع الاستهداف',
-        choices=TARGET_CHOICES,
+    INSTRUCTOR_TARGET_CHOICES = [
+        ('all_instructors', 'جميع الدكاترة'),
+        ('major_instructors', 'حسب التخصص'),
+        ('specific_instructor', 'دكتور محدد'),
+    ]
+
+    recipient_type = forms.ChoiceField(
+        label='نوع المستلمين',
+        choices=RECIPIENT_TYPE_CHOICES,
         widget=forms.Select(attrs={
             'class': 'form-select',
-            'hx-get': '',  # سيتم تعبئته في JS
-            'hx-target': '#targeting-details',
-            'hx-swap': 'innerHTML',
+            'id': 'id_recipient_type',
+        })
+    )
+
+    target_type = forms.ChoiceField(
+        label='نوع الاستهداف',
+        choices=STUDENT_TARGET_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_target_type',
         })
     )
 
@@ -83,9 +99,6 @@ class ComposerForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={
             'class': 'form-select',
-            'hx-get': '',  # سيتم تعبئته ديناميكياً
-            'hx-target': '#level-select',
-            'hx-swap': 'innerHTML',
         })
     )
     level = forms.ModelChoiceField(
@@ -97,9 +110,8 @@ class ComposerForm(forms.Form):
     specific_user_id = forms.IntegerField(
         label='معرف المستخدم',
         required=False,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'أدخل الرقم الأكاديمي أو المعرف...',
+        widget=forms.HiddenInput(attrs={
+            'id': 'id_specific_user_id',
         })
     )
 
@@ -120,12 +132,12 @@ class ComposerForm(forms.Form):
                 is_active=True
             ).order_by('course_code')
 
-            # المدرس لا يستطيع إرسال لجميع المدرسين أو الجميع
-            self.fields['target_type'].choices = [
-                ('course_students', 'طلاب مقرر محدد'),
-                ('major_students', 'طلاب تخصص ومستوى'),
-                ('specific_student', 'طالب محدد'),
-            ]
+            # المدرس: تقييد أنواع المستلمين لطلاب فقط
+            if not is_admin:
+                self.fields['recipient_type'].choices = [
+                    ('students', 'الطلاب'),
+                ]
+                self.fields['recipient_type'].initial = 'students'
 
     def clean(self):
         cleaned_data = super().clean()
@@ -136,10 +148,10 @@ class ComposerForm(forms.Form):
         if target_type == 'course_students' and not course:
             self.add_error('course', 'يجب اختيار مقرر عند استهداف طلاب المقرر.')
 
-        if target_type == 'major_students' and not major:
-            self.add_error('major', 'يجب اختيار تخصص عند استهداف طلاب تخصص.')
+        if target_type in ('major_students', 'major_instructors') and not major:
+            self.add_error('major', 'يجب اختيار تخصص.')
 
-        if target_type == 'specific_student' and not cleaned_data.get('specific_user_id'):
+        if target_type in ('specific_student', 'specific_instructor') and not cleaned_data.get('specific_user_id'):
             self.add_error('specific_user_id', 'يجب تحديد المستخدم.')
 
         return cleaned_data

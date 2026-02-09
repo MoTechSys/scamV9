@@ -1,5 +1,5 @@
 """
-Views Package - نظام الإشعارات v2
+Views Package - نظام الإشعارات v3
 S-ACM - Smart Academic Content Management System
 """
 
@@ -15,11 +15,16 @@ from .common import (
     ArchiveNotificationView,
     UnreadCountView,
     PreferencesView,
+    NotificationManagementView,
 )
 
 from .composer import (
     ComposerView,
     SentNotificationsView,
+    HideSentNotificationView,
+    UnhideSentNotificationView,
+    DeleteSentNotificationView,
+    RestoreSentNotificationView,
 )
 
 from .htmx import (
@@ -27,6 +32,7 @@ from .htmx import (
     HtmxStudentsCount,
     HtmxBellUpdate,
     HtmxSearchStudents,
+    HtmxSearchInstructors,
 )
 
 __all__ = [
@@ -42,12 +48,18 @@ __all__ = [
     'ArchiveNotificationView',
     'UnreadCountView',
     'PreferencesView',
+    'NotificationManagementView',
     # Composer
     'ComposerView',
     'SentNotificationsView',
+    'HideSentNotificationView',
+    'UnhideSentNotificationView',
+    'DeleteSentNotificationView',
+    'RestoreSentNotificationView',
     # HTMX
     'HtmxLevelsForMajor',
     'HtmxStudentsCount',
     'HtmxBellUpdate',
     'HtmxSearchStudents',
+    'HtmxSearchInstructors',
 ]

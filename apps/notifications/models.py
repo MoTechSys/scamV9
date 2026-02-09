@@ -117,6 +117,23 @@ class Notification(models.Model):
         verbose_name='نشط'
     )
 
+    # === حالة المرسل ===
+    is_hidden_by_sender = models.BooleanField(
+        default=False,
+        verbose_name='مخفي من المرسل',
+        help_text='المرسل أخفى الإشعار من قائمته المرسلة'
+    )
+    is_deleted_by_sender = models.BooleanField(
+        default=False,
+        verbose_name='محذوف من المرسل',
+        help_text='المرسل نقل الإشعار إلى سلة المهملات'
+    )
+    sender_deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='وقت حذف المرسل'
+    )
+
     class Meta:
         db_table = 'notifications'
         verbose_name = 'إشعار'

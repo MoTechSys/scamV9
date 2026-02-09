@@ -1,0 +1,783 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}إدارة الإشعارات - S-ACM{% endblock %}
+{% block page_title %}إدارة الإشعارات{% endblock %}
+
+{% block extra_styles %}
+/* === Notification Management Styles === */
+.notif-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: var(--bg-body, #f1f5f9);
+    border-radius: var(--radius, 12px);
+    margin-bottom: 24px;
+}
+.notif-tab {
+    flex: 1;
+    text-align: center;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-secondary, #64748b);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+.notif-tab:hover {
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--primary, #6366f1);
+}
+.notif-tab.active {
+    background: var(--bg-card, #fff);
+    color: var(--primary, #6366f1);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+}
+.notif-tab .badge {
+    font-size: 0.65rem;
+    padding: 3px 7px;
+}
+.notif-item {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    transition: background 0.15s;
+}
+.notif-item:hover {
+    background: rgba(99, 102, 241, 0.03);
+}
+.notif-item.unread {
+    background: rgba(99, 102, 241, 0.06);
+}
+.notif-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.notif-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+.notif-item:hover .notif-actions {
+    opacity: 1;
+}
+.action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.filter-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.filter-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid var(--border-color, #e2e8f0);
+    color: var(--text-secondary, #64748b);
+    background: transparent;
+}
+.filter-pill:hover, .filter-pill.active {
+    background: var(--primary, #6366f1);
+    color: #fff;
+    border-color: var(--primary, #6366f1);
+}
+.empty-section {
+    text-align: center;
+    padding: 48px 20px;
+}
+.empty-section .icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(100, 116, 139, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+/* Responsive */
+@media (max-width: 767.98px) {
+    .notif-tabs {
+        flex-direction: column;
+        gap: 2px;
+    }
+    .notif-tab {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+    .notif-item {
+        padding: 12px;
+    }
+    .notif-actions {
+        opacity: 1;
+        flex-direction: column;
+    }
+}
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- Navigation Tabs -->
+<div class="notif-tabs">
+    <a href="?section=inbox" class="notif-tab {% if active_section == 'inbox' %}active{% endif %}">
+        <i class="bi bi-inbox"></i>
+        <span>صندوق الوارد</span>
+        {% if unread_count > 0 %}
+        <span class="badge bg-danger">{{ unread_count }}</span>
+        {% endif %}
+    </a>
+    {% if can_compose %}
+    <a href="?section=compose" class="notif-tab {% if active_section == 'compose' %}active{% endif %}">
+        <i class="bi bi-pencil-square"></i>
+        <span>إرسال إشعار</span>
+    </a>
+    <a href="?section=sent" class="notif-tab {% if active_section == 'sent' %}active{% endif %}">
+        <i class="bi bi-send-check"></i>
+        <span>الإشعارات المرسلة</span>
+    </a>
+    {% endif %}
+    <a href="?section=auto" class="notif-tab {% if active_section == 'auto' %}active{% endif %}">
+        <i class="bi bi-lightning"></i>
+        <span>الإشعارات التلقائية</span>
+    </a>
+    <a href="?section=trash" class="notif-tab {% if active_section == 'trash' %}active{% endif %}">
+        <i class="bi bi-trash3"></i>
+        <span>سلة المهملات</span>
+        {% if trash_count > 0 %}
+        <span class="badge bg-secondary">{{ trash_count }}</span>
+        {% endif %}
+    </a>
+</div>
+
+<!-- ============ INBOX SECTION ============ -->
+{% if active_section == 'inbox' %}
+<div class="card" style="border:none; border-radius:var(--radius,12px); box-shadow:var(--shadow-sm);">
+    <!-- Header -->
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3" style="border-bottom:1px solid var(--border-color);">
+        <div>
+            <h6 class="mb-0 fw-bold"><i class="bi bi-inbox me-2" style="color:var(--primary);"></i>صندوق الوارد</h6>
+        </div>
+        <div class="d-flex gap-2">
+            {% if unread_count > 0 %}
+            <form method="post" action="{% url 'notifications:mark_all_read' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary" style="border-radius:8px;">
+                    <i class="bi bi-check-all me-1"></i>تحديد الكل كمقروء
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'notifications:preferences' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+                <i class="bi bi-gear me-1"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Pills -->
+    <div class="px-3 pt-3">
+        <div class="filter-pills">
+            <a href="?section=inbox&filter=all" class="filter-pill {% if active_filter == 'all' %}active{% endif %}">
+                <i class="bi bi-inbox me-1"></i>الكل
+            </a>
+            <a href="?section=inbox&filter=unread" class="filter-pill {% if active_filter == 'unread' %}active{% endif %}">
+                <i class="bi bi-envelope me-1"></i>غير مقروءة
+                {% if unread_count > 0 %}<span class="badge bg-danger ms-1" style="font-size:0.6rem;">{{ unread_count }}</span>{% endif %}
+            </a>
+            <a href="?section=inbox&filter=archived" class="filter-pill {% if active_filter == 'archived' %}active{% endif %}">
+                <i class="bi bi-archive me-1"></i>مؤرشفة
+            </a>
+            <a href="?section=inbox&filter=high_priority" class="filter-pill {% if active_filter == 'high_priority' %}active{% endif %}">
+                <i class="bi bi-exclamation-triangle me-1"></i>أولوية عالية
+            </a>
+        </div>
+    </div>
+
+    <!-- Notifications List -->
+    {% for nr in notifications %}
+    <div class="notif-item {% if not nr.is_read %}unread{% endif %}">
+        <div class="notif-icon"
+            style="{% if nr.notification.notification_type == 'file_upload' %}background:rgba(99,102,241,0.1);color:#6366f1;
+            {% elif nr.notification.notification_type == 'announcement' %}background:rgba(245,158,11,0.1);color:#f59e0b;
+            {% elif nr.notification.notification_type == 'system' %}background:rgba(239,68,68,0.1);color:#ef4444;
+            {% elif nr.notification.notification_type == 'course' %}background:rgba(14,165,233,0.1);color:#0ea5e9;
+            {% elif nr.notification.notification_type == 'assignment' %}background:rgba(168,85,247,0.1);color:#a855f7;
+            {% elif nr.notification.notification_type == 'exam' %}background:rgba(239,68,68,0.1);color:#ef4444;
+            {% elif nr.notification.notification_type == 'grade' %}background:rgba(34,197,94,0.1);color:#22c55e;
+            {% elif nr.notification.notification_type == 'welcome' %}background:rgba(99,102,241,0.1);color:#6366f1;
+            {% else %}background:rgba(100,116,139,0.1);color:#64748b;{% endif %}">
+            {% if nr.notification.notification_type == 'file_upload' %}<i class="bi bi-file-earmark-plus fs-5"></i>
+            {% elif nr.notification.notification_type == 'announcement' %}<i class="bi bi-megaphone fs-5"></i>
+            {% elif nr.notification.notification_type == 'system' %}<i class="bi bi-gear fs-5"></i>
+            {% elif nr.notification.notification_type == 'course' %}<i class="bi bi-book fs-5"></i>
+            {% elif nr.notification.notification_type == 'assignment' %}<i class="bi bi-journal-check fs-5"></i>
+            {% elif nr.notification.notification_type == 'exam' %}<i class="bi bi-clipboard-data fs-5"></i>
+            {% elif nr.notification.notification_type == 'grade' %}<i class="bi bi-award fs-5"></i>
+            {% elif nr.notification.notification_type == 'welcome' %}<i class="bi bi-hand-thumbs-up fs-5"></i>
+            {% else %}<i class="bi bi-bell fs-5"></i>{% endif %}
+        </div>
+        <div class="flex-grow-1 min-w-0">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <a href="{% url 'notifications:detail' nr.notification.pk %}" class="text-decoration-none text-dark">
+                    <h6 class="mb-0 {% if not nr.is_read %}fw-bold{% else %}fw-semibold{% endif %}" style="font-size:0.95rem;">
+                        {% if not nr.is_read %}<span class="d-inline-block rounded-circle bg-primary me-1" style="width:8px;height:8px;"></span>{% endif %}
+                        {{ nr.notification.title }}
+                    </h6>
+                </a>
+                <div class="d-flex align-items-center gap-1 flex-shrink-0 ms-2">
+                    <span class="badge bg-{{ nr.notification.priority_color }}" style="font-size:0.65rem;border-radius:6px;">
+                        {{ nr.notification.get_priority_display }}
+                    </span>
+                </div>
+            </div>
+            <p class="mb-1 text-muted" style="font-size:0.85rem;line-height:1.5;">{{ nr.notification.body|truncatechars:120 }}</p>
+            <div class="d-flex gap-3 flex-wrap align-items-center">
+                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ nr.notification.created_at|timesince }} مضت</small>
+                {% if nr.notification.sender %}
+                <small class="text-muted"><i class="bi bi-person me-1"></i>{{ nr.notification.sender.full_name }}</small>
+                {% endif %}
+                {% if nr.notification.course %}
+                <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.7rem;border-radius:6px;">
+                    <i class="bi bi-book me-1"></i>{{ nr.notification.course.course_name }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="notif-actions">
+            {% if not nr.is_read %}
+            <form method="post" action="{% url 'notifications:mark_read' nr.notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="action-btn" style="background:rgba(34,197,94,0.1);color:#22c55e;" title="تحديد كمقروء">
+                    <i class="bi bi-check2"></i>
+                </button>
+            </form>
+            {% endif %}
+            <form method="post" action="{% url 'notifications:archive' nr.notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="action-btn" style="background:rgba(14,165,233,0.1);color:#0ea5e9;" title="أرشفة">
+                    <i class="bi bi-archive"></i>
+                </button>
+            </form>
+            <form method="post" action="{% url 'notifications:delete' nr.notification.pk %}" onsubmit="return confirm('نقل إلى سلة المهملات؟')">
+                {% csrf_token %}
+                <button type="submit" class="action-btn" style="background:rgba(239,68,68,0.1);color:#ef4444;" title="حذف">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-section">
+        <div class="icon-circle">
+            <i class="bi bi-bell-slash fs-1" style="color:#94a3b8;"></i>
+        </div>
+        <h5 class="fw-bold">لا توجد إشعارات</h5>
+        <p class="text-muted mb-0" style="font-size:0.9rem;">ستظهر هنا الإشعارات الجديدة عند وصولها</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ============ COMPOSE SECTION ============ -->
+{% elif active_section == 'compose' and can_compose %}
+<div class="card" style="border:none;border-radius:var(--radius,12px);box-shadow:var(--shadow-sm);">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-4">
+            <i class="bi bi-pencil-square me-2" style="color:var(--primary,#6366f1);"></i>
+            إنشاء إشعار جديد
+        </h5>
+
+        <form method="post" action="{% url 'notifications:compose' %}" novalidate id="composer-form">
+            {% csrf_token %}
+
+            <!-- عنوان الإشعار -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-type me-1"></i>عنوان الإشعار
+                </label>
+                {{ form.title }}
+                {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>{% endif %}
+            </div>
+
+            <!-- محتوى الإشعار -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-text-paragraph me-1"></i>محتوى الإشعار
+                </label>
+                {{ form.body }}
+                {% if form.body.errors %}<div class="text-danger small mt-1">{{ form.body.errors.0 }}</div>{% endif %}
+            </div>
+
+            <!-- نوع الإشعار والأولوية -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-tag me-1"></i>نوع الإشعار
+                    </label>
+                    {{ form.notification_type }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-exclamation-diamond me-1"></i>الأولوية
+                    </label>
+                    {{ form.priority }}
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <h6 class="fw-bold mb-3"><i class="bi bi-people me-2" style="color:var(--secondary,#0ea5e9);"></i>المستلمون</h6>
+
+            <!-- نوع المستلمين (طلاب / دكاترة) -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">نوع المستلمين</label>
+                    {{ form.recipient_type }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">نوع الاستهداف</label>
+                    {{ form.target_type }}
+                </div>
+            </div>
+
+            <!-- فلاتر ديناميكية -->
+            <div id="targeting-details">
+                <!-- المقرر -->
+                <div class="mb-3" id="course-field" style="display:none;">
+                    <label class="form-label fw-semibold"><i class="bi bi-book me-1"></i>المقرر</label>
+                    {{ form.course }}
+                    {% if form.course.errors %}<div class="text-danger small mt-1">{{ form.course.errors.0 }}</div>{% endif %}
+                </div>
+
+                <!-- التخصص -->
+                <div class="mb-3" id="major-field" style="display:none;">
+                    <label class="form-label fw-semibold"><i class="bi bi-mortarboard me-1"></i>التخصص</label>
+                    {{ form.major }}
+                    {% if form.major.errors %}<div class="text-danger small mt-1">{{ form.major.errors.0 }}</div>{% endif %}
+                </div>
+
+                <!-- المستوى -->
+                <div class="mb-3" id="level-field" style="display:none;">
+                    <label class="form-label fw-semibold"><i class="bi bi-layers me-1"></i>المستوى</label>
+                    <div id="level-select">
+                        {{ form.level }}
+                    </div>
+                </div>
+
+                <!-- بحث عن مستخدم محدد -->
+                <div class="mb-3" id="specific-user-field" style="display:none;">
+                    <label class="form-label fw-semibold" id="search-label">بحث عن مستخدم</label>
+                    <input type="text" class="form-control mb-2" placeholder="ابحث بالاسم أو الرقم الأكاديمي..."
+                           id="user-search-input"
+                           hx-trigger="keyup changed delay:300ms"
+                           hx-target="#user-results"
+                           name="q">
+                    <div id="user-results" class="list-group"></div>
+                    {{ form.specific_user_id }}
+                    <div id="selected-user" class="mt-2"></div>
+                </div>
+            </div>
+
+            <!-- عدد المستلمين (HTMX) -->
+            <div id="recipients-count" class="mb-3"
+                 hx-get="{% url 'notifications:htmx_students_count' %}"
+                 hx-trigger="change from:#id_target_type, change from:#id_recipient_type, change from:#id_course, change from:#id_major, change from:#id_level delay:300ms"
+                 hx-include="#composer-form"
+                 hx-swap="innerHTML">
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-send me-1"></i>إرسال الإشعار
+                </button>
+                <a href="?section=inbox" class="btn btn-outline-secondary">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============ SENT SECTION ============ -->
+{% elif active_section == 'sent' and can_compose %}
+<div class="card" style="border:none;border-radius:var(--radius,12px);box-shadow:var(--shadow-sm);">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3" style="border-bottom:1px solid var(--border-color);">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-send-check me-2" style="color:var(--primary);"></i>الإشعارات المرسلة</h6>
+        <a href="?section=compose" class="btn btn-sm btn-primary" style="border-radius:8px;">
+            <i class="bi bi-plus-lg me-1"></i>إشعار جديد
+        </a>
+    </div>
+    {% for notification in sent_notifications %}
+    <div class="notif-item">
+        <div class="notif-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">
+            <i class="bi bi-megaphone"></i>
+        </div>
+        <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-start">
+                <h6 class="mb-1 fw-semibold" style="font-size:0.95rem;">{{ notification.title }}</h6>
+                <span class="badge bg-{{ notification.priority_color }}" style="font-size:0.65rem;">{{ notification.get_priority_display }}</span>
+            </div>
+            <p class="mb-1 text-muted" style="font-size:0.85rem;">{{ notification.body|truncatechars:100 }}</p>
+            <div class="d-flex gap-3 flex-wrap">
+                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ notification.created_at|timesince }} مضت</small>
+                <small class="text-muted"><i class="bi bi-people me-1"></i>{{ notification.recipients_count }} مستلم</small>
+                <small class="text-success"><i class="bi bi-check-all me-1"></i>{{ notification.read_count }} قرأ</small>
+                {% if notification.course %}
+                <small class="text-primary"><i class="bi bi-book me-1"></i>{{ notification.course.course_name }}</small>
+                {% endif %}
+            </div>
+        </div>
+        <div class="notif-actions">
+            <form method="post" action="{% url 'notifications:hide_sent' notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="action-btn" style="background:rgba(245,158,11,0.1);color:#f59e0b;" title="إخفاء">
+                    <i class="bi bi-eye-slash"></i>
+                </button>
+            </form>
+            <form method="post" action="{% url 'notifications:delete_sent' notification.pk %}" onsubmit="return confirm('نقل إلى سلة المهملات؟')">
+                {% csrf_token %}
+                <button type="submit" class="action-btn" style="background:rgba(239,68,68,0.1);color:#ef4444;" title="حذف">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-section">
+        <div class="icon-circle">
+            <i class="bi bi-send fs-1" style="color:#94a3b8;"></i>
+        </div>
+        <h5 class="fw-bold">لم ترسل أي إشعارات بعد</h5>
+        <p class="text-muted mb-3">يمكنك إرسال إشعارات للمستخدمين من هنا</p>
+        <a href="?section=compose" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>إشعار جديد</a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ============ AUTO SECTION ============ -->
+{% elif active_section == 'auto' %}
+<div class="card" style="border:none;border-radius:var(--radius,12px);box-shadow:var(--shadow-sm);">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-4">
+            <i class="bi bi-lightning me-2" style="color:var(--warning,#f59e0b);"></i>
+            الإشعارات التلقائية
+        </h5>
+        <p class="text-muted mb-4">النظام يرسل هذه الإشعارات تلقائياً عند حدوث أحداث معينة. يمكنك التحكم في استقبالها عبر البريد الإلكتروني.</p>
+
+        <!-- قائمة الإشعارات التلقائية -->
+        <div class="list-group list-group-flush">
+            <div class="list-group-item d-flex align-items-center gap-3 px-0 py-3">
+                <div class="notif-icon" style="background:rgba(34,197,94,0.1);color:#22c55e;width:40px;height:40px;border-radius:10px;">
+                    <i class="bi bi-person-plus"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">تسجيل طالب جديد في مقرر الدكتور</h6>
+                    <small class="text-muted">يتم إرسال إشعار عند تسجيل طالب جديد في أحد مقرراتك</small>
+                </div>
+                <span class="badge bg-success">مفعّل</span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-3 px-0 py-3">
+                <div class="notif-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;width:40px;height:40px;border-radius:10px;">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">رفع واجب أو مشروع</h6>
+                    <small class="text-muted">يتم إشعار الطلاب عند رفع واجب أو مشروع جديد</small>
+                </div>
+                <span class="badge bg-success">مفعّل</span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-3 px-0 py-3">
+                <div class="notif-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;width:40px;height:40px;border-radius:10px;">
+                    <i class="bi bi-calendar-event"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">موعد محاضرة أو امتحان</h6>
+                    <small class="text-muted">تذكير بمواعيد المحاضرات والامتحانات القادمة</small>
+                </div>
+                <span class="badge bg-success">مفعّل</span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-3 px-0 py-3">
+                <div class="notif-icon" style="background:rgba(168,85,247,0.1);color:#a855f7;width:40px;height:40px;border-radius:10px;">
+                    <i class="bi bi-award"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">إعلان درجات المقرر</h6>
+                    <small class="text-muted">إشعار الطلاب عند نشر درجات جديدة</small>
+                </div>
+                <span class="badge bg-success">مفعّل</span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-3 px-0 py-3">
+                <div class="notif-icon" style="background:rgba(14,165,233,0.1);color:#0ea5e9;width:40px;height:40px;border-radius:10px;">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">تحديث محتوى المقرر</h6>
+                    <small class="text-muted">إشعار عند رفع ملفات جديدة أو تحديث محتوى المقرر</small>
+                </div>
+                <span class="badge bg-success">مفعّل</span>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- إعدادات البريد الإلكتروني -->
+        <h6 class="fw-bold mb-3"><i class="bi bi-envelope me-2" style="color:var(--primary);"></i>إعدادات البريد الإلكتروني</h6>
+
+        {% if preference_form %}
+        <form method="post" action="{% url 'notifications:preferences' %}">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between align-items-center p-3 mb-3" style="background:var(--bg-body,#f1f5f9);border-radius:8px;">
+                <div>
+                    <h6 class="mb-0 fw-bold" style="font-size:0.9rem;">إشعارات البريد الإلكتروني</h6>
+                    <small class="text-muted">تفعيل أو تعطيل جميع إشعارات البريد</small>
+                </div>
+                <div class="form-check form-switch">
+                    {{ preference_form.email_enabled }}
+                </div>
+            </div>
+
+            {% for field in preference_form %}
+            {% if field.name != 'email_enabled' %}
+            <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                <label class="form-check-label fw-semibold" for="{{ field.id_for_label }}" style="font-size:0.9rem;">
+                    {{ field.label }}
+                </label>
+                <div class="form-check form-switch">
+                    {{ field }}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-check-lg me-1"></i>حفظ الإعدادات
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============ TRASH SECTION ============ -->
+{% elif active_section == 'trash' %}
+<div class="card" style="border:none;border-radius:var(--radius,12px);box-shadow:var(--shadow-sm);">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3" style="border-bottom:1px solid var(--border-color);">
+        <div>
+            <h6 class="mb-0 fw-bold"><i class="bi bi-trash3 me-2"></i>سلة المهملات</h6>
+            <small class="text-muted">الإشعارات المحذوفة يمكن استعادتها أو حذفها نهائياً</small>
+        </div>
+        {% if received_trash or sent_trash %}
+        <form method="post" action="{% url 'notifications:empty_trash' %}" onsubmit="return confirm('إفراغ سلة المهملات نهائياً؟ لا يمكن التراجع!')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-danger" style="border-radius:8px;">
+                <i class="bi bi-trash3-fill me-1"></i>إفراغ السلة
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- الإشعارات الواردة المحذوفة -->
+    {% if received_trash %}
+    <div class="px-3 pt-3">
+        <small class="fw-bold text-muted text-uppercase" style="font-size:0.7rem;letter-spacing:1px;">
+            <i class="bi bi-inbox me-1"></i>إشعارات واردة محذوفة
+        </small>
+    </div>
+    {% for nr in received_trash %}
+    <div class="notif-item" style="opacity:0.8;">
+        <div class="notif-icon" style="background:rgba(100,116,139,0.1);color:#64748b;width:40px;height:40px;border-radius:10px;">
+            <i class="bi bi-bell"></i>
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-0 fw-semibold" style="font-size:0.95rem;">{{ nr.notification.title }}</h6>
+            <small class="text-muted">{{ nr.notification.body|truncatechars:80 }}</small><br>
+            <small class="text-muted"><i class="bi bi-clock me-1"></i>حُذف {{ nr.deleted_at|timesince }} مضت</small>
+        </div>
+        <div class="d-flex gap-1">
+            <form method="post" action="{% url 'notifications:restore' nr.notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="action-btn" style="background:rgba(34,197,94,0.1);color:#22c55e;" title="استعادة">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- الإشعارات المرسلة المحذوفة -->
+    {% if sent_trash %}
+    <div class="px-3 pt-3">
+        <small class="fw-bold text-muted text-uppercase" style="font-size:0.7rem;letter-spacing:1px;">
+            <i class="bi bi-send me-1"></i>إشعارات مرسلة محذوفة
+        </small>
+    </div>
+    {% for notification in sent_trash %}
+    <div class="notif-item" style="opacity:0.8;">
+        <div class="notif-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;width:40px;height:40px;border-radius:10px;">
+            <i class="bi bi-send"></i>
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-0 fw-semibold" style="font-size:0.95rem;">{{ notification.title }}</h6>
+            <small class="text-muted">{{ notification.body|truncatechars:80 }}</small><br>
+            <small class="text-muted"><i class="bi bi-clock me-1"></i>حُذف {{ notification.sender_deleted_at|timesince }} مضت</small>
+            <small class="text-muted ms-2"><i class="bi bi-people me-1"></i>{{ notification.recipients_count }} مستلم</small>
+        </div>
+        <div class="d-flex gap-1">
+            <form method="post" action="{% url 'notifications:restore_sent' notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="action-btn" style="background:rgba(34,197,94,0.1);color:#22c55e;" title="استعادة">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if not received_trash and not sent_trash %}
+    <div class="empty-section">
+        <div class="icon-circle">
+            <i class="bi bi-trash3 fs-1" style="color:#94a3b8;"></i>
+        </div>
+        <h5 class="fw-bold">سلة المهملات فارغة</h5>
+        <p class="text-muted mb-0">لا توجد إشعارات محذوفة</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const recipientType = document.getElementById('id_recipient_type');
+    const targetType = document.getElementById('id_target_type');
+    const courseField = document.getElementById('course-field');
+    const majorField = document.getElementById('major-field');
+    const levelField = document.getElementById('level-field');
+    const specificField = document.getElementById('specific-user-field');
+    const searchInput = document.getElementById('user-search-input');
+    const searchLabel = document.getElementById('search-label');
+
+    if (!recipientType || !targetType) return;
+
+    const studentTargets = [
+        {value: 'all_students', label: 'جميع الطلاب'},
+        {value: 'major_students', label: 'حسب التخصص والمستوى'},
+        {value: 'course_students', label: 'طلاب مقرر محدد'},
+        {value: 'specific_student', label: 'طالب محدد'},
+    ];
+
+    const instructorTargets = [
+        {value: 'all_instructors', label: 'جميع الدكاترة'},
+        {value: 'major_instructors', label: 'حسب التخصص'},
+        {value: 'specific_instructor', label: 'دكتور محدد'},
+    ];
+
+    function updateTargetOptions() {
+        const type = recipientType.value;
+        const targets = type === 'instructors' ? instructorTargets : studentTargets;
+
+        targetType.innerHTML = '';
+        targets.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.value;
+            opt.textContent = t.label;
+            targetType.appendChild(opt);
+        });
+        updateFields();
+    }
+
+    function updateFields() {
+        const value = targetType.value;
+
+        // إخفاء كل الحقول
+        if(courseField) courseField.style.display = 'none';
+        if(majorField) majorField.style.display = 'none';
+        if(levelField) levelField.style.display = 'none';
+        if(specificField) specificField.style.display = 'none';
+
+        if (value === 'course_students') {
+            if(courseField) courseField.style.display = 'block';
+        } else if (value === 'major_students') {
+            if(majorField) majorField.style.display = 'block';
+            if(levelField) levelField.style.display = 'block';
+        } else if (value === 'major_instructors') {
+            if(majorField) majorField.style.display = 'block';
+        } else if (value === 'specific_student') {
+            if(specificField) specificField.style.display = 'block';
+            if(searchLabel) searchLabel.textContent = 'بحث عن طالب';
+            if(searchInput) {
+                searchInput.setAttribute('hx-get', '{% url "notifications:htmx_search_students" %}');
+                htmx.process(searchInput);
+            }
+        } else if (value === 'specific_instructor') {
+            if(specificField) specificField.style.display = 'block';
+            if(searchLabel) searchLabel.textContent = 'بحث عن دكتور';
+            if(searchInput) {
+                searchInput.setAttribute('hx-get', '{% url "notifications:htmx_search_instructors" %}');
+                htmx.process(searchInput);
+            }
+        }
+    }
+
+    recipientType.addEventListener('change', updateTargetOptions);
+    targetType.addEventListener('change', updateFields);
+
+    // Initialize
+    updateTargetOptions();
+
+    // HTMX: Cascading Dropdown for Major -> Level
+    const majorSelect = document.getElementById('id_major');
+    if (majorSelect) {
+        majorSelect.setAttribute('hx-get', '{% url "notifications:htmx_levels" %}');
+        majorSelect.setAttribute('hx-target', '#level-select');
+        majorSelect.setAttribute('hx-trigger', 'change');
+        majorSelect.setAttribute('hx-swap', 'innerHTML');
+        htmx.process(majorSelect);
+    }
+});
+
+// User search selection (unified for students and instructors)
+function selectUser(id, name) {
+    document.getElementById('id_specific_user_id').value = id;
+    document.getElementById('selected-user').innerHTML =
+        '<div class="alert alert-success py-2 px-3 d-flex align-items-center gap-2">' +
+        '<i class="bi bi-person-check"></i>' +
+        '<span>تم اختيار: <strong>' + name + '</strong></span>' +
+        '<button type="button" class="btn-close ms-auto" onclick="clearUser()"></button></div>';
+    document.getElementById('user-results').innerHTML = '';
+}
+
+function clearUser() {
+    document.getElementById('id_specific_user_id').value = '';
+    document.getElementById('selected-user').innerHTML = '';
+}
+</script>
+{% endblock %}
