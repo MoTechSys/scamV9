@@ -1,11 +1,12 @@
 """
 Common Notification Views - العمليات المشتركة لجميع المستخدمين
-S-ACM - Smart Academic Content Management System
+S-ACM - Smart Academic Content Management System v3
 
 Views:
+- NotificationManagementView: صفحة إدارة الإشعارات الرئيسية
 - NotificationListView: قائمة الإشعارات (غير مقروءة، الكل، الأرشيف)
 - NotificationDetailView: تفاصيل إشعار + تحديد كمقروء + انتقال ذكي
-- NotificationTrashView: سلة المهملات
+- NotificationTrashView: سلة المهملات الموحدة (إشعارات واردة + مرسلة)
 - MarkAsReadView / MarkAllAsReadView
 - DeleteNotificationView / RestoreNotificationView / EmptyTrashView
 - ArchiveNotificationView
@@ -24,6 +25,67 @@ from django.utils import timezone
 from ..models import Notification, NotificationRecipient, NotificationPreference
 from ..services import NotificationService
 from ..forms import NotificationPreferenceForm
+
+
+class NotificationManagementView(LoginRequiredMixin, View):
+    """
+    صفحة إدارة الإشعارات الرئيسية
+    تحتوي على 3 أقسام: إرسال إشعار، الإشعارات التلقائية، صندوق الوارد
+    """
+    template_name = 'notifications/management.html'
+
+    def get(self, request):
+        section = request.GET.get('section', 'inbox')
+        filter_type = request.GET.get('filter', 'all')
+
+        context = {
+            'active_page': 'notifications',
+            'active_section': section,
+            'active_filter': filter_type,
+            'unread_count': NotificationService.get_unread_count(request.user),
+            'can_compose': request.user.is_admin() or request.user.is_instructor(),
+        }
+
+        if section == 'inbox':
+            notifications = NotificationService.get_user_notifications(
+                request.user, filter_type=filter_type, include_read=True,
+            )
+            context['notifications'] = notifications
+            context['trash_count'] = NotificationRecipient.objects.filter(
+                user=request.user, is_deleted=True
+            ).count()
+            # عدد الإشعارات المرسلة المحذوفة أيضاً
+            if context['can_compose']:
+                context['trash_count'] += Notification.objects.filter(
+                    sender=request.user, is_deleted_by_sender=True
+                ).count()
+
+        elif section == 'compose' and context['can_compose']:
+            from ..forms import ComposerForm
+            context['form'] = ComposerForm(
+                user=request.user,
+                is_admin=request.user.is_admin(),
+            )
+
+        elif section == 'sent' and context['can_compose']:
+            context['sent_notifications'] = NotificationService.get_sent_notifications(request.user)
+
+        elif section == 'auto':
+            # الإشعارات التلقائية - عرض الإعدادات
+            prefs = NotificationPreference.get_or_create_for_user(request.user)
+            context['preference_form'] = NotificationPreferenceForm(instance=prefs)
+
+        elif section == 'trash':
+            # سلة المهملات الموحدة
+            received_trash = NotificationService.get_user_notifications(
+                request.user, filter_type='trash',
+            )
+            context['received_trash'] = received_trash
+
+            if context['can_compose']:
+                context['sent_trash'] = NotificationService.get_sender_trash(request.user)
+
+        return render(request, self.template_name, context)
 
 
 class NotificationListView(LoginRequiredMixin, ListView):
@@ -87,7 +149,7 @@ class NotificationDetailView(LoginRequiredMixin, View):
 
 class NotificationTrashView(LoginRequiredMixin, ListView):
     """
-    سلة المهملات - الإشعارات المحذوفة (ناعمياً)
+    سلة المهملات الموحدة - الإشعارات المحذوفة (واردة + مرسلة)
     """
     template_name = 'notifications/trash.html'
     context_object_name = 'notifications'
@@ -102,6 +164,9 @@ class NotificationTrashView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['active_page'] = 'notifications'
+        # إضافة الإشعارات المرسلة المحذوفة
+        if self.request.user.is_admin() or self.request.user.is_instructor():
+            context['sent_trash'] = NotificationService.get_sender_trash(self.request.user)
         return context
 
 
@@ -116,7 +181,7 @@ class MarkAsReadView(LoginRequiredMixin, View):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': True})
 
-        return redirect('notifications:list')
+        return redirect('notifications:management')
 
 
 class MarkAllAsReadView(LoginRequiredMixin, View):
@@ -133,7 +198,7 @@ class MarkAllAsReadView(LoginRequiredMixin, View):
             return JsonResponse({'success': True, 'count': count})
 
         messages.success(request, 'تم تحديد جميع الإشعارات كمقروءة.')
-        return redirect('notifications:list')
+        return redirect('notifications:management')
 
 
 class DeleteNotificationView(LoginRequiredMixin, View):
@@ -150,7 +215,7 @@ class DeleteNotificationView(LoginRequiredMixin, View):
             return JsonResponse({'success': True})
 
         messages.success(request, 'تم نقل الإشعار إلى سلة المهملات.')
-        return redirect('notifications:list')
+        return redirect('notifications:management')
 
 
 class RestoreNotificationView(LoginRequiredMixin, View):
@@ -165,14 +230,18 @@ class RestoreNotificationView(LoginRequiredMixin, View):
             })
 
         messages.success(request, 'تم استعادة الإشعار.')
-        return redirect('notifications:trash')
+        return redirect('notifications:management', )
 
 
 class EmptyTrashView(LoginRequiredMixin, View):
-    """إفراغ سلة المهملات"""
+    """إفراغ سلة المهملات (واردة + مرسلة)"""
 
     def post(self, request):
+        # إفراغ سلة الإشعارات الواردة
         NotificationService.empty_trash(request.user)
+        # إفراغ سلة الإشعارات المرسلة
+        if request.user.is_admin() or request.user.is_instructor():
+            NotificationService.empty_sender_trash(request.user)
 
         if request.headers.get('HX-Request'):
             return HttpResponse(status=204, headers={
@@ -180,7 +249,7 @@ class EmptyTrashView(LoginRequiredMixin, View):
             })
 
         messages.success(request, 'تم إفراغ سلة المهملات.')
-        return redirect('notifications:trash')
+        return redirect('notifications:management')
 
 
 class ArchiveNotificationView(LoginRequiredMixin, View):
@@ -195,7 +264,7 @@ class ArchiveNotificationView(LoginRequiredMixin, View):
             })
 
         messages.success(request, 'تم أرشفة الإشعار.')
-        return redirect('notifications:list')
+        return redirect('notifications:management')
 
 
 class UnreadCountView(LoginRequiredMixin, View):
@@ -227,7 +296,7 @@ class PreferencesView(LoginRequiredMixin, View):
         if form.is_valid():
             form.save()
             messages.success(request, 'تم حفظ تفضيلات الإشعارات.')
-            return redirect('notifications:preferences')
+            return redirect('notifications:management')
         return render(request, self.template_name, {
             'form': form,
             'active_page': 'notifications',

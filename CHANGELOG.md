@@ -1,6 +1,73 @@
-# CHANGELOG - Enterprise v2 Refactoring
+# CHANGELOG - Enterprise v3 Refactoring
 
 <div dir="rtl">
+
+## [v3.0.0] - 2026-02-09 - Notification System v3 & Sidebar Enhancement
+
+### Phase: Notification Management System Overhaul
+
+#### 1. صفحة إدارة الإشعارات الرئيسية (Management Page)
+- **قبل**: الإشعارات كانت مجرد عناصر جانبية متفرقة في القائمة
+- **بعد**: صفحة رئيسية كاملة مخصصة للإشعارات تحتوي على 5 أقسام:
+  - **صندوق الوارد**: عرض الإشعارات مع فلاتر (الكل، غير مقروءة، مؤرشفة، أولوية عالية)
+  - **إرسال إشعار**: نموذج إنشاء إشعار جديد مع استهداف ذكي
+  - **الإشعارات المرسلة**: قائمة الإشعارات المرسلة مع إمكانية الحذف والإخفاء
+  - **الإشعارات التلقائية**: عرض وإدارة الإشعارات التلقائية وإعدادات البريد
+  - **سلة المهملات**: سلة موحدة للإشعارات الواردة والمرسلة
+
+#### 2. إصلاح خلل اختيار المستلمين (Recipients Bug Fix)
+- **المشكلة**: عند اختيار الخيار الثاني أو الثالث في المستلمون، الحقول الديناميكية لا تعمل
+- **الحل**: إعادة هيكلة نظام الاستهداف بالكامل:
+  - فصل نوع المستلمين (طلاب/دكاترة) عن نوع الاستهداف
+  - JavaScript ديناميكي يغير خيارات الاستهداف حسب نوع المستلمين
+  - إضافة دعم الاستهداف: `major_instructors`, `specific_instructor`
+  - HTMX بحث عن الدكاترة (`HtmxSearchInstructors`)
+
+#### 3. حذف/إخفاء الإشعارات المرسلة
+- **جديد**: الدكتور يمكنه الآن:
+  - إخفاء إشعار مرسل من القائمة (`is_hidden_by_sender`)
+  - حذف إشعار مرسل (نقل لسلة المهملات) (`is_deleted_by_sender`)
+  - استعادة إشعار مرسل من سلة المهملات
+- **حقول جديدة في النموذج**:
+  - `Notification.is_hidden_by_sender`
+  - `Notification.is_deleted_by_sender`
+  - `Notification.sender_deleted_at`
+
+#### 4. سلة المهملات الموحدة
+- سلة مهملات واحدة تعرض:
+  - الإشعارات الواردة المحذوفة
+  - الإشعارات المرسلة المحذوفة
+- زر إفراغ السلة يحذف الكل نهائياً
+
+#### 5. القائمة الجانبية: طي/توسيع مع أيقونات
+- **جديد**: زر طي/توسيع القائمة الجانبية
+- عند الطي: تظهر الأيقونات فقط مع Tooltip عند hover
+- الحالة محفوظة في `localStorage` بين الجلسات
+- تصميم سلس مع `transition` و `animation`
+- متجاوب: على الموبايل القائمة كاملة مع overlay
+
+#### 6. تحسينات التصميم
+- تصميم متجاوب بالكامل (Responsive)
+- تبديل سلس بين الأقسام في صفحة الإدارة
+- أنماط مخصصة للعناصر الجديدة
+- Filter pills للفلترة السريعة
+
+### الملفات المعدلة
+| الملف | التغيير |
+|-------|---------|
+| `apps/notifications/models.py` | إضافة حقول حذف/إخفاء المرسل |
+| `apps/notifications/forms.py` | إعادة هيكلة نموذج الإرسال مع دعم الدكاترة |
+| `apps/notifications/services.py` | إضافة خدمات إدارة الإشعارات المرسلة |
+| `apps/notifications/urls.py` | إضافة URLs جديدة للإدارة |
+| `apps/notifications/views/__init__.py` | تحديث الاستيرادات |
+| `apps/notifications/views/common.py` | إضافة NotificationManagementView |
+| `apps/notifications/views/composer.py` | إضافة views حذف/إخفاء المرسل |
+| `apps/notifications/views/htmx.py` | إصلاح البحث + إضافة بحث الدكاترة |
+| `templates/notifications/management.html` | صفحة الإدارة الرئيسية الجديدة |
+| `templates/layouts/dashboard_base.html` | القائمة الجانبية مع طي/توسيع |
+| `apps/notifications/migrations/0003_*` | Migration للحقول الجديدة |
+
+---
 
 ## [v2.0.0] - 2026-02-08 - Enterprise Performance & AI Governance
 

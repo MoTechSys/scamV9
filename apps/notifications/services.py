@@ -299,6 +299,23 @@ class NotificationService:
                 role__code=Role.INSTRUCTOR,
             )
 
+        elif target_type == 'major_instructors':
+            if not major:
+                return User.objects.none()
+            # الدكاترة الذين يدرّسون مقررات في هذا التخصص
+            from apps.courses.models import Course
+            course_ids = Course.objects.filter(
+                course_majors__major=major,
+                is_active=True,
+            ).values_list('pk', flat=True)
+            instructor_ids = Course.objects.filter(
+                pk__in=course_ids,
+            ).values_list('instructor_courses__instructor', flat=True).distinct()
+            return base_qs.filter(
+                pk__in=instructor_ids,
+                role__code=Role.INSTRUCTOR,
+            )
+
         return User.objects.none()
 
     # ============================================================
@@ -367,14 +384,86 @@ class NotificationService:
         )
 
     @classmethod
-    def get_sent_notifications(cls, user):
+    def get_sent_notifications(cls, user, include_hidden=False):
         """جلب الإشعارات المرسلة من المستخدم"""
-        return Notification.objects.filter(
-            sender=user
-        ).annotate(
+        qs = Notification.objects.filter(
+            sender=user,
+            is_deleted_by_sender=False,
+        )
+        if not include_hidden:
+            qs = qs.filter(is_hidden_by_sender=False)
+        return qs.annotate(
             recipients_count=Count('recipients'),
             read_count=Count('recipients', filter=Q(recipients__is_read=True)),
         ).order_by('-created_at')
+
+    @classmethod
+    def get_sender_trash(cls, user):
+        """جلب الإشعارات المرسلة المحذوفة (في سلة المهملات)"""
+        return Notification.objects.filter(
+            sender=user,
+            is_deleted_by_sender=True,
+        ).annotate(
+            recipients_count=Count('recipients'),
+            read_count=Count('recipients', filter=Q(recipients__is_read=True)),
+        ).order_by('-sender_deleted_at')
+
+    @classmethod
+    def hide_sent_notification(cls, notification_id, user):
+        """إخفاء إشعار مرسل من القائمة"""
+        try:
+            notification = Notification.objects.get(pk=notification_id, sender=user)
+            notification.is_hidden_by_sender = True
+            notification.save(update_fields=['is_hidden_by_sender'])
+            return True
+        except Notification.DoesNotExist:
+            return False
+
+    @classmethod
+    def unhide_sent_notification(cls, notification_id, user):
+        """إظهار إشعار مرسل مخفي"""
+        try:
+            notification = Notification.objects.get(pk=notification_id, sender=user)
+            notification.is_hidden_by_sender = False
+            notification.save(update_fields=['is_hidden_by_sender'])
+            return True
+        except Notification.DoesNotExist:
+            return False
+
+    @classmethod
+    def soft_delete_sent(cls, notification_id, user):
+        """نقل إشعار مرسل إلى سلة المهملات"""
+        try:
+            notification = Notification.objects.get(pk=notification_id, sender=user)
+            notification.is_deleted_by_sender = True
+            notification.sender_deleted_at = timezone.now()
+            notification.save(update_fields=['is_deleted_by_sender', 'sender_deleted_at'])
+            return True
+        except Notification.DoesNotExist:
+            return False
+
+    @classmethod
+    def restore_sent_from_trash(cls, notification_id, user):
+        """استعادة إشعار مرسل من سلة المهملات"""
+        try:
+            notification = Notification.objects.get(
+                pk=notification_id, sender=user, is_deleted_by_sender=True
+            )
+            notification.is_deleted_by_sender = False
+            notification.sender_deleted_at = None
+            notification.is_hidden_by_sender = False
+            notification.save(update_fields=['is_deleted_by_sender', 'sender_deleted_at', 'is_hidden_by_sender'])
+            return True
+        except Notification.DoesNotExist:
+            return False
+
+    @classmethod
+    def empty_sender_trash(cls, user):
+        """إفراغ سلة مهملات المرسل (حذف نهائي)"""
+        return Notification.objects.filter(
+            sender=user,
+            is_deleted_by_sender=True,
+        ).update(is_active=False)
 
     # ============================================================
     # 5) عمليات التحديث
