@@ -5,86 +5,125 @@
 {% block page_title %}الإشعارات{% endblock %}
 
 {% block dashboard_content %}
+<!-- Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h5 class="mb-1 fw-bold"><i class="bi bi-bell me-2"></i>الإشعارات</h5>
+        <h5 class="mb-1 fw-bold"><i class="bi bi-bell me-2"></i>مركز الإشعارات</h5>
         {% if unread_count %}
         <small class="text-muted">لديك <span class="text-danger fw-bold">{{ unread_count }}</span> إشعار غير مقروء</small>
         {% else %}
         <small class="text-muted">جميع الإشعارات مقروءة</small>
         {% endif %}
     </div>
-    {% if notifications %}
-    <form method="post" action="{% url 'notifications:mark_all_read' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-outline-primary" style="border-radius: var(--radius-sm, 8px);">
-            <i class="bi bi-check-all me-1"></i>تحديد الكل كمقروء
-        </button>
-    </form>
-    {% endif %}
+    <div class="d-flex gap-2">
+        {% if unread_count > 0 %}
+        <form method="post" action="{% url 'notifications:mark_all_read' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-primary" style="border-radius:8px;">
+                <i class="bi bi-check-all me-1"></i>تحديد الكل كمقروء
+            </button>
+        </form>
+        {% endif %}
+        <a href="{% url 'notifications:preferences' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+            <i class="bi bi-gear me-1"></i>الإعدادات
+        </a>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="d-flex gap-2 mb-3">
+    <a href="?filter=all" class="btn btn-sm {% if active_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="border-radius:20px;">
+        <i class="bi bi-inbox me-1"></i>الكل
+    </a>
+    <a href="?filter=unread" class="btn btn-sm {% if active_filter == 'unread' %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="border-radius:20px;">
+        <i class="bi bi-envelope me-1"></i>غير مقروءة
+        {% if unread_count > 0 %}<span class="badge bg-danger ms-1">{{ unread_count }}</span>{% endif %}
+    </a>
+    <a href="?filter=archived" class="btn btn-sm {% if active_filter == 'archived' %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="border-radius:20px;">
+        <i class="bi bi-archive me-1"></i>الأرشيف
+    </a>
+    <a href="{% url 'notifications:trash' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:20px;">
+        <i class="bi bi-trash3 me-1"></i>سلة المهملات
+        {% if trash_count > 0 %}<span class="badge bg-secondary ms-1">{{ trash_count }}</span>{% endif %}
+    </a>
 </div>
 
 <!-- Notifications List -->
-<div class="card" style="border: none; border-radius: var(--radius, 12px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));">
+<div class="card" style="border:none; border-radius:var(--radius,12px); box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,0.06));">
     {% for nr in notifications %}
-    <div class="d-flex align-items-start gap-3 p-3 {% if not nr.is_read %}bg-primary bg-opacity-10{% endif %}" style="border-bottom: 1px solid var(--border-color, #e2e8f0);">
+    <div class="d-flex align-items-start gap-3 p-3 {% if not nr.is_read %}bg-primary bg-opacity-10{% endif %}" style="border-bottom:1px solid var(--border-color,#e2e8f0);">
         <!-- Icon -->
         <div class="flex-shrink-0">
-            <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
-                {% if nr.notification.notification_type == 'file_upload' %}background:rgba(99,102,241,0.1); color:#6366f1;
-                {% elif nr.notification.notification_type == 'announcement' %}background:rgba(245,158,11,0.1); color:#f59e0b;
-                {% elif nr.notification.notification_type == 'system' %}background:rgba(239,68,68,0.1); color:#ef4444;
-                {% elif nr.notification.notification_type == 'course' %}background:rgba(14,165,233,0.1); color:#0ea5e9;
-                {% else %}background:rgba(100,116,139,0.1); color:#64748b;{% endif %}">
-                {% if nr.notification.notification_type == 'file_upload' %}
-                <i class="bi bi-file-earmark-plus fs-5"></i>
-                {% elif nr.notification.notification_type == 'announcement' %}
-                <i class="bi bi-megaphone fs-5"></i>
-                {% elif nr.notification.notification_type == 'system' %}
-                <i class="bi bi-gear fs-5"></i>
-                {% elif nr.notification.notification_type == 'course' %}
-                <i class="bi bi-book fs-5"></i>
-                {% else %}
-                <i class="bi bi-bell fs-5"></i>
-                {% endif %}
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+                {% if nr.notification.notification_type == 'file_upload' %}background:rgba(99,102,241,0.1);color:#6366f1;
+                {% elif nr.notification.notification_type == 'announcement' %}background:rgba(245,158,11,0.1);color:#f59e0b;
+                {% elif nr.notification.notification_type == 'system' %}background:rgba(239,68,68,0.1);color:#ef4444;
+                {% elif nr.notification.notification_type == 'course' %}background:rgba(14,165,233,0.1);color:#0ea5e9;
+                {% elif nr.notification.notification_type == 'assignment' %}background:rgba(168,85,247,0.1);color:#a855f7;
+                {% elif nr.notification.notification_type == 'exam' %}background:rgba(239,68,68,0.1);color:#ef4444;
+                {% elif nr.notification.notification_type == 'grade' %}background:rgba(34,197,94,0.1);color:#22c55e;
+                {% elif nr.notification.notification_type == 'welcome' %}background:rgba(99,102,241,0.1);color:#6366f1;
+                {% else %}background:rgba(100,116,139,0.1);color:#64748b;{% endif %}">
+                {% if nr.notification.notification_type == 'file_upload' %}<i class="bi bi-file-earmark-plus fs-5"></i>
+                {% elif nr.notification.notification_type == 'announcement' %}<i class="bi bi-megaphone fs-5"></i>
+                {% elif nr.notification.notification_type == 'system' %}<i class="bi bi-gear fs-5"></i>
+                {% elif nr.notification.notification_type == 'course' %}<i class="bi bi-book fs-5"></i>
+                {% elif nr.notification.notification_type == 'assignment' %}<i class="bi bi-journal-check fs-5"></i>
+                {% elif nr.notification.notification_type == 'exam' %}<i class="bi bi-clipboard-data fs-5"></i>
+                {% elif nr.notification.notification_type == 'grade' %}<i class="bi bi-award fs-5"></i>
+                {% elif nr.notification.notification_type == 'welcome' %}<i class="bi bi-hand-thumbs-up fs-5"></i>
+                {% else %}<i class="bi bi-bell fs-5"></i>{% endif %}
             </div>
         </div>
 
         <!-- Content -->
         <div class="flex-grow-1 min-w-0">
             <div class="d-flex justify-content-between align-items-start mb-1">
-                <h6 class="mb-0 {% if not nr.is_read %}fw-bold{% else %}fw-semibold{% endif %}" style="font-size:0.95rem;">
-                    {% if not nr.is_read %}<span class="d-inline-block rounded-circle bg-primary me-1" style="width:8px; height:8px;"></span>{% endif %}
-                    {{ nr.notification.title }}
-                </h6>
-                <small class="text-muted flex-shrink-0 ms-2" style="font-size:0.75rem;">
-                    <i class="bi bi-clock me-1"></i>{{ nr.notification.created_at|timesince }} مضت
-                </small>
+                <a href="{% url 'notifications:detail' nr.notification.pk %}" class="text-decoration-none text-dark">
+                    <h6 class="mb-0 {% if not nr.is_read %}fw-bold{% else %}fw-semibold{% endif %}" style="font-size:0.95rem;">
+                        {% if not nr.is_read %}<span class="d-inline-block rounded-circle bg-primary me-1" style="width:8px;height:8px;"></span>{% endif %}
+                        {{ nr.notification.title }}
+                    </h6>
+                </a>
+                <div class="d-flex align-items-center gap-1 flex-shrink-0 ms-2">
+                    <span class="badge bg-{{ nr.notification.priority_color }}" style="font-size:0.65rem;border-radius:6px;">
+                        {{ nr.notification.get_priority_display }}
+                    </span>
+                    <small class="text-muted" style="font-size:0.75rem;">{{ nr.notification.created_at|timesince }} مضت</small>
+                </div>
             </div>
-            <p class="mb-1 text-muted" style="font-size:0.875rem; line-height:1.5;">{{ nr.notification.body|truncatechars:150 }}</p>
-            {% if nr.notification.course %}
-            <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.7rem; font-weight:600; border-radius:6px;">
-                <i class="bi bi-book me-1"></i>{{ nr.notification.course.course_name }}
-            </span>
-            {% endif %}
-            {% if nr.notification.sender %}
-            <small class="text-muted d-block mt-1"><i class="bi bi-person me-1"></i>{{ nr.notification.sender.full_name }}</small>
-            {% endif %}
+            <p class="mb-1 text-muted" style="font-size:0.875rem;line-height:1.5;">{{ nr.notification.body|truncatechars:150 }}</p>
+            <div class="d-flex gap-2 flex-wrap">
+                {% if nr.notification.course %}
+                <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.7rem;border-radius:6px;">
+                    <i class="bi bi-book me-1"></i>{{ nr.notification.course.course_name }}
+                </span>
+                {% endif %}
+                {% if nr.notification.sender %}
+                <small class="text-muted"><i class="bi bi-person me-1"></i>{{ nr.notification.sender.full_name }}</small>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Actions -->
         <div class="flex-shrink-0 d-flex gap-1">
             {% if not nr.is_read %}
-            <form method="post" action="{% url 'notifications:mark_read' nr.pk %}">
+            <form method="post" action="{% url 'notifications:mark_read' nr.notification.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm" style="width:32px; height:32px; border-radius:8px; padding:0; display:flex; align-items:center; justify-content:center; background:rgba(34,197,94,0.1); color:#22c55e; border:none;" title="تحديد كمقروء">
+                <button type="submit" class="btn btn-sm" style="width:32px;height:32px;border-radius:8px;padding:0;display:flex;align-items:center;justify-content:center;background:rgba(34,197,94,0.1);color:#22c55e;border:none;" title="تحديد كمقروء">
                     <i class="bi bi-check2"></i>
                 </button>
             </form>
             {% endif %}
-            <form method="post" action="{% url 'notifications:delete' nr.pk %}">
+            <form method="post" action="{% url 'notifications:archive' nr.notification.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm" style="width:32px; height:32px; border-radius:8px; padding:0; display:flex; align-items:center; justify-content:center; background:rgba(239,68,68,0.1); color:#ef4444; border:none;" title="حذف" onclick="return confirm('هل تريد حذف هذا الإشعار؟')">
+                <button type="submit" class="btn btn-sm" style="width:32px;height:32px;border-radius:8px;padding:0;display:flex;align-items:center;justify-content:center;background:rgba(14,165,233,0.1);color:#0ea5e9;border:none;" title="أرشفة">
+                    <i class="bi bi-archive"></i>
+                </button>
+            </form>
+            <form method="post" action="{% url 'notifications:delete' nr.notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="width:32px;height:32px;border-radius:8px;padding:0;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,0.1);color:#ef4444;border:none;" title="حذف" onclick="return confirm('هل تريد نقل هذا الإشعار إلى سلة المهملات؟')">
                     <i class="bi bi-trash3"></i>
                 </button>
             </form>
@@ -92,7 +131,7 @@
     </div>
     {% empty %}
     <div class="text-center py-5">
-        <div style="width:80px; height:80px; border-radius:50%; background:rgba(100,116,139,0.1); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+        <div style="width:80px;height:80px;border-radius:50%;background:rgba(100,116,139,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
             <i class="bi bi-bell-slash fs-1" style="color:#94a3b8;"></i>
         </div>
         <h5 class="fw-bold">لا توجد إشعارات</h5>
@@ -100,28 +139,21 @@
     </div>
     {% endfor %}
 
+    <!-- Pagination -->
     {% if notifications.has_other_pages %}
-    <div class="p-3" style="border-top: 1px solid var(--border-color, #e2e8f0);">
+    <div class="p-3" style="border-top:1px solid var(--border-color,#e2e8f0);">
         <nav>
             <ul class="pagination justify-content-center mb-0" style="gap:4px;">
                 {% if notifications.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ notifications.previous_page_number }}" style="border-radius:8px;">
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
-                </li>
+                <li class="page-item"><a class="page-link" href="?page={{ notifications.previous_page_number }}&filter={{ active_filter }}" style="border-radius:8px;"><i class="bi bi-chevron-right"></i></a></li>
                 {% endif %}
                 {% for num in notifications.paginator.page_range %}
                 <li class="page-item {% if notifications.number == num %}active{% endif %}">
-                    <a class="page-link" href="?page={{ num }}" style="border-radius:8px; {% if notifications.number == num %}background: var(--primary, #6366f1); border-color: var(--primary, #6366f1); color:#fff;{% endif %}">{{ num }}</a>
+                    <a class="page-link" href="?page={{ num }}&filter={{ active_filter }}" style="border-radius:8px;{% if notifications.number == num %}background:var(--primary,#6366f1);border-color:var(--primary,#6366f1);color:#fff;{% endif %}">{{ num }}</a>
                 </li>
                 {% endfor %}
                 {% if notifications.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ notifications.next_page_number }}" style="border-radius:8px;">
-                        <i class="bi bi-chevron-left"></i>
-                    </a>
-                </li>
+                <li class="page-item"><a class="page-link" href="?page={{ notifications.next_page_number }}&filter={{ active_filter }}" style="border-radius:8px;"><i class="bi bi-chevron-left"></i></a></li>
                 {% endif %}
             </ul>
         </nav>

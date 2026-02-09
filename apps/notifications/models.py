@@ -1,35 +1,59 @@
 """
-نماذج نظام الإشعارات
+نماذج نظام الإشعارات - النسخة الجديدة v2
 S-ACM - Smart Academic Content Management System
+
+=== Architecture ===
+- Notification: الإشعار الأصلي مع GenericForeignKey للربط بأي كائن
+- NotificationRecipient: مستلم الإشعار مع حالة القراءة والحذف والأرشفة
+- NotificationPreference: تفضيلات إشعارات المستخدم (البريد الإلكتروني)
 """
 
 from django.db import models
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 
 class Notification(models.Model):
     """
-    جدول الإشعارات (Notifications)
+    جدول الإشعارات الرئيسي
+    يدعم GenericForeignKey للربط بأي كائن في النظام
     """
+    # === أنواع الإشعارات ===
     NOTIFICATION_TYPES = [
         ('general', 'إشعار عام'),
         ('course', 'إشعار مقرر'),
         ('file_upload', 'رفع ملف جديد'),
+        ('assignment', 'واجب'),
+        ('exam', 'اختبار'),
+        ('grade', 'درجة'),
         ('announcement', 'إعلان'),
         ('system', 'إشعار نظام'),
+        ('welcome', 'ترحيب'),
     ]
-    
+
+    # === مستويات الأولوية مع ألوان Badge ===
     PRIORITY_CHOICES = [
         ('low', 'منخفضة'),
         ('normal', 'عادية'),
         ('high', 'عالية'),
         ('urgent', 'عاجلة'),
     ]
-    
+
+    PRIORITY_COLORS = {
+        'low': 'secondary',
+        'normal': 'info',
+        'high': 'warning',
+        'urgent': 'danger',
+    }
+
+    # === الحقول الأساسية ===
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name='sent_notifications',
         verbose_name='المرسل'
     )
@@ -52,7 +76,23 @@ class Notification(models.Model):
         default='normal',
         verbose_name='الأولوية'
     )
-    # ربط اختياري بمقرر
+
+    # === GenericForeignKey - الربط الذكي بأي كائن ===
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='نوع الكائن المرتبط'
+    )
+    object_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='معرف الكائن المرتبط'
+    )
+    related_object = GenericForeignKey('content_type', 'object_id')
+
+    # === ربط مباشر بالمقرر (للاستعلامات السريعة) ===
     course = models.ForeignKey(
         'courses.Course',
         on_delete=models.CASCADE,
@@ -61,15 +101,8 @@ class Notification(models.Model):
         related_name='notifications',
         verbose_name='المقرر المرتبط'
     )
-    # ربط اختياري بملف
-    file = models.ForeignKey(
-        'courses.LectureFile',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='notifications',
-        verbose_name='الملف المرتبط'
-    )
+
+    # === التواريخ والحالة ===
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='تاريخ الإنشاء'
@@ -83,33 +116,68 @@ class Notification(models.Model):
         default=True,
         verbose_name='نشط'
     )
-    
+
     class Meta:
         db_table = 'notifications'
         verbose_name = 'إشعار'
         verbose_name_plural = 'الإشعارات'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['notification_type']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['course']),
+            models.Index(fields=['notification_type', 'created_at'], name='idx_notif_type_date'),
+            models.Index(fields=['course', 'created_at'], name='idx_notif_course_date'),
+            models.Index(fields=['sender', 'created_at'], name='idx_notif_sender_date'),
+            models.Index(fields=['content_type', 'object_id'], name='idx_notif_generic'),
+            models.Index(fields=['is_active', 'created_at'], name='idx_notif_active_date'),
         ]
-    
+
     def __str__(self):
         return self.title
-    
+
+    @property
+    def priority_color(self):
+        """إرجاع لون Bootstrap للأولوية"""
+        return self.PRIORITY_COLORS.get(self.priority, 'info')
+
+    @property
+    def is_expired(self):
+        """هل انتهت صلاحية الإشعار؟"""
+        if self.expires_at:
+            return timezone.now() > self.expires_at
+        return False
+
     def get_recipients_count(self):
-        """الحصول على عدد المستلمين"""
+        """عدد المستلمين"""
         return self.recipients.count()
-    
+
     def get_read_count(self):
-        """الحصول على عدد من قرأ الإشعار"""
+        """عدد من قرأ الإشعار"""
         return self.recipients.filter(is_read=True).count()
+
+    def get_related_url(self):
+        """
+        إرجاع الرابط الذكي للكائن المرتبط بالإشعار
+        يستخدم للانتقال المباشر عند النقر
+        """
+        if not self.content_type or not self.object_id:
+            return None
+
+        model_name = self.content_type.model
+        try:
+            from django.urls import reverse
+            if model_name == 'lecturefile':
+                obj = self.content_type.get_object_for_this_type(pk=self.object_id)
+                return reverse('student:study_room', kwargs={'file_pk': obj.pk})
+            elif model_name == 'course':
+                return reverse('student:course_detail', kwargs={'pk': self.object_id})
+        except Exception:
+            pass
+        return None
 
 
 class NotificationRecipient(models.Model):
     """
-    جدول مستلمي الإشعارات (Notification_Recipients)
+    جدول مستلمي الإشعارات
+    كل صف يمثل علاقة إشعار-مستلم مع حالة القراءة والحذف
     """
     notification = models.ForeignKey(
         Notification,
@@ -135,168 +203,116 @@ class NotificationRecipient(models.Model):
     is_deleted = models.BooleanField(
         default=False,
         verbose_name='محذوف',
-        help_text='حذف الإشعار من قائمة المستخدم فقط'
+        help_text='حذف ناعم - الإشعار لا يظهر لكنه موجود'
     )
-    
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='وقت الحذف'
+    )
+    is_archived = models.BooleanField(
+        default=False,
+        verbose_name='مؤرشف'
+    )
+
     class Meta:
         db_table = 'notification_recipients'
         unique_together = ('notification', 'user')
         verbose_name = 'مستلم إشعار'
         verbose_name_plural = 'مستلمو الإشعارات'
         indexes = [
-            models.Index(fields=['user', 'is_read']),
-            models.Index(fields=['user', 'is_deleted']),
+            models.Index(fields=['user', 'is_read', 'is_deleted'], name='idx_nr_user_read_del'),
+            models.Index(fields=['user', 'is_deleted', 'is_archived'], name='idx_nr_user_del_arch'),
+            models.Index(fields=['user', 'is_read'], name='idx_nr_user_read'),
         ]
-    
+
     def __str__(self):
         return f"{self.notification.title} -> {self.user.full_name}"
-    
+
     def mark_as_read(self):
         """تحديد الإشعار كمقروء"""
-        from django.utils import timezone
         if not self.is_read:
             self.is_read = True
             self.read_at = timezone.now()
             self.save(update_fields=['is_read', 'read_at'])
 
+    def soft_delete(self):
+        """حذف ناعم - نقل إلى سلة المهملات"""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at'])
 
-class NotificationManager:
+    def restore(self):
+        """استعادة من سلة المهملات"""
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    def archive(self):
+        """أرشفة الإشعار"""
+        self.is_archived = True
+        self.save(update_fields=['is_archived'])
+
+    def unarchive(self):
+        """إلغاء الأرشفة"""
+        self.is_archived = False
+        self.save(update_fields=['is_archived'])
+
+
+class NotificationPreference(models.Model):
     """
-    مدير لإنشاء وإرسال الإشعارات
+    تفضيلات إشعارات المستخدم
+    تفعيل/تعطيل الإشعارات عبر البريد الإلكتروني حسب النوع
     """
-    
-    @staticmethod
-    def create_file_upload_notification(file_obj, course):
-        """
-        إنشاء إشعار عند رفع ملف جديد
-        يرسل إلى جميع طلاب المقرر
-        """
-        from apps.accounts.models import User
-        
-        notification = Notification.objects.create(
-            sender=file_obj.uploader,
-            title=f"ملف جديد في {course.course_name}",
-            body=f"تم رفع ملف جديد: {file_obj.title}",
-            notification_type='file_upload',
-            course=course,
-            file=file_obj
-        )
-        
-        # الحصول على جميع طلاب المقرر
-        students = User.objects.filter(
-            role__role_name='Student',
-            major__in=course.course_majors.values_list('major', flat=True),
-            level=course.level,
-            account_status='active'
-        )
-        
-        # إنشاء سجلات المستلمين
-        recipients = [
-            NotificationRecipient(notification=notification, user=student)
-            for student in students
-        ]
-        NotificationRecipient.objects.bulk_create(recipients)
-        
-        return notification
-    
-    @staticmethod
-    def create_course_notification(sender, course, title, body, send_to_all_department=False):
-        """
-        إنشاء إشعار للمقرر
-        """
-        from apps.accounts.models import User
-        
-        notification = Notification.objects.create(
-            sender=sender,
-            title=title,
-            body=body,
-            notification_type='course',
-            course=course
-        )
-        
-        # تحديد المستلمين
-        if send_to_all_department:
-            # إرسال لجميع طلاب القسم والمستوى
-            students = User.objects.filter(
-                role__role_name='Student',
-                major__in=course.course_majors.values_list('major', flat=True),
-                account_status='active'
-            )
-        else:
-            # إرسال لطلاب المقرر فقط
-            students = User.objects.filter(
-                role__role_name='Student',
-                major__in=course.course_majors.values_list('major', flat=True),
-                level=course.level,
-                account_status='active'
-            )
-        
-        # إنشاء سجلات المستلمين
-        recipients = [
-            NotificationRecipient(notification=notification, user=student)
-            for student in students
-        ]
-        NotificationRecipient.objects.bulk_create(recipients)
-        
-        return notification
-    
-    @staticmethod
-    def create_system_notification(title, body, users=None):
-        """
-        إنشاء إشعار نظام
-        """
-        from apps.accounts.models import User
-        
-        notification = Notification.objects.create(
-            sender=None,
-            title=title,
-            body=body,
-            notification_type='system',
-            priority='high'
-        )
-        
-        if users is None:
-            # إرسال لجميع المستخدمين النشطين
-            users = User.objects.filter(account_status='active')
-        
-        # إنشاء سجلات المستلمين
-        recipients = [
-            NotificationRecipient(notification=notification, user=user)
-            for user in users
-        ]
-        NotificationRecipient.objects.bulk_create(recipients)
-        
-        return notification
-    
-    @staticmethod
-    def get_unread_count(user):
-        """
-        الحصول على عدد الإشعارات غير المقروءة للمستخدم
-        """
-        return NotificationRecipient.objects.filter(
-            user=user,
-            is_read=False,
-            is_deleted=False,
-            notification__is_active=True
-        ).count()
-    
-    @staticmethod
-    def get_user_notifications(user, include_read=True, limit=None):
-        """
-        الحصول على إشعارات المستخدم
-        """
-        queryset = NotificationRecipient.objects.filter(
-            user=user,
-            is_deleted=False,
-            notification__is_active=True
-        ).select_related('notification', 'notification__sender', 'notification__course')
-        
-        if not include_read:
-            queryset = queryset.filter(is_read=False)
-        
-        queryset = queryset.order_by('-notification__created_at')
-        
-        if limit:
-            queryset = queryset[:limit]
-        
-        return queryset
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notification_preferences',
+        verbose_name='المستخدم'
+    )
+    email_enabled = models.BooleanField(
+        default=True,
+        verbose_name='تفعيل إشعارات البريد الإلكتروني'
+    )
+    email_file_upload = models.BooleanField(
+        default=True,
+        verbose_name='إشعار رفع ملف جديد'
+    )
+    email_announcement = models.BooleanField(
+        default=True,
+        verbose_name='إشعار إعلان'
+    )
+    email_assignment = models.BooleanField(
+        default=True,
+        verbose_name='إشعار واجب'
+    )
+    email_exam = models.BooleanField(
+        default=True,
+        verbose_name='إشعار اختبار'
+    )
+    email_grade = models.BooleanField(
+        default=True,
+        verbose_name='إشعار درجة'
+    )
+    email_system = models.BooleanField(
+        default=True,
+        verbose_name='إشعار نظام'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='تاريخ التحديث'
+    )
+
+    class Meta:
+        db_table = 'notification_preferences'
+        verbose_name = 'تفضيلات إشعارات'
+        verbose_name_plural = 'تفضيلات الإشعارات'
+
+    def __str__(self):
+        return f"تفضيلات إشعارات {self.user.full_name}"
+
+    @classmethod
+    def get_or_create_for_user(cls, user):
+        """الحصول على تفضيلات المستخدم أو إنشائها"""
+        obj, _ = cls.objects.get_or_create(user=user)
+        return obj

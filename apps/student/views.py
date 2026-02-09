@@ -32,7 +32,7 @@ from apps.courses.models import Course, LectureFile
 from apps.courses.mixins import CourseEnrollmentMixin
 from apps.accounts.views import StudentRequiredMixin
 from apps.accounts.models import UserActivity
-from apps.notifications.models import NotificationManager
+from apps.notifications.services import NotificationService
 from apps.ai_features.models import (
     AISummary, AIGeneratedQuestion, AIChat,
     AIUsageLog, StudentProgress
@@ -135,7 +135,7 @@ class StudentDashboardView(LoginRequiredMixin, StudentRequiredMixin, TemplateVie
         context['resume_item'] = last_progress
 
         # === Notification count (uses cached context_processor mostly) ===
-        context['unread_notifications'] = NotificationManager.get_unread_count(student)
+        context['unread_notifications'] = NotificationService.get_unread_count(student)
 
         # === Recent files across all current courses ===
         context['recent_files'] = (

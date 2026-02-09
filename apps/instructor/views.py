@@ -33,7 +33,7 @@ from apps.courses.models import Course, LectureFile, InstructorCourse
 from apps.courses.forms import LectureFileForm
 from apps.accounts.views import InstructorRequiredMixin
 from apps.accounts.models import User, UserActivity, Role
-from apps.notifications.models import NotificationManager
+from apps.notifications.services import NotificationService
 from apps.core.models import AuditLog
 from apps.ai_features.models import (
     AISummary, AIGeneratedQuestion, AIChat,
@@ -226,7 +226,7 @@ class FileUploadView(LoginRequiredMixin, InstructorRequiredMixin, CreateView):
 
         if file_obj.is_visible:
             try:
-                NotificationManager.create_file_upload_notification(file_obj, file_obj.course)
+                NotificationService.notify_file_upload(file_obj, file_obj.course)
             except Exception:
                 pass
 
@@ -289,7 +289,7 @@ class FileToggleVisibilityView(LoginRequiredMixin, InstructorRequiredMixin, View
 
         if file_obj.is_visible:
             try:
-                NotificationManager.create_file_upload_notification(file_obj, file_obj.course)
+                NotificationService.notify_file_upload(file_obj, file_obj.course)
             except Exception:
                 pass
 

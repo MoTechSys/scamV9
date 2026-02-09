@@ -143,31 +143,129 @@ apps/courses/views/
 
 ---
 
-### 3. notifications (نظام الإشعارات)
+### 3. notifications v2 (نظام الإشعارات المتكامل)
 
 **Path:** `apps/notifications/`
 
 **Models:**
 | Model | Description |
 |-------|-------------|
-| `Notification` | Notification content |
-| `NotificationRecipient` | User-specific delivery |
-| `NotificationManager` | Static methods for creating notifications |
+| `Notification` | Notification content with GenericForeignKey for smart linking |
+| `NotificationRecipient` | User-specific delivery with read/deleted/archived states |
+| `NotificationPreference` | Per-user email notification preferences |
 
 **Notification Types:**
-- general, course, file_upload, grade, system
+- general, course, file_upload, assignment, exam, grade, announcement, system, welcome
+
+**Priority Levels (with Badge Colors):**
+- low (secondary), normal (info), high (warning), urgent (danger)
+
+**GenericForeignKey:**
+- Links notifications to any Django model (LectureFile, Course, etc.)
+- Enables smart navigation: clicking notification goes to related content
+
+**Django Signals (Auto-Notifications):**
+| Signal | Trigger | Recipients |
+|--------|---------|------------|
+| `handle_user_activation` | User account activated | The activated user (welcome) |
+| `handle_file_upload` | New LectureFile created (visible) | All course students |
+| `handle_file_visibility_change` | File changed to visible | All course students |
+
+**Signals Configuration:**
+- Signals are registered in `apps.py` via `ready()` method
+- Signal file: `apps/notifications/signals.py`
+
+**Service Layer (Central API):**
+```python
+from apps.notifications.services import NotificationService
+
+# === Creating Notifications ===
+NotificationService.create_notification(title, body, recipients=users, ...)
+NotificationService.notify_file_upload(file_obj, course)
+NotificationService.notify_new_user(user)
+NotificationService.notify_assignment(assignment_obj, course, sender)
+NotificationService.notify_exam(exam_obj, course, sender)
+NotificationService.notify_grade(student, course, message)
+NotificationService.notify_system(title, body, users=None)
+
+# === Smart Targeting ===
+users = NotificationService.get_targeted_users(
+    target_type='course_students',  # or: major_students, all_students, all_instructors, everyone, specific_student
+    major=major_obj, level=level_obj, course=course_obj
+)
+
+# === Reading ===
+NotificationService.get_unread_count(user)
+NotificationService.get_user_notifications(user, filter_type='all')  # all, unread, archived, trash
+NotificationService.get_recent_notifications(user, limit=5)
+NotificationService.get_sent_notifications(user)
+
+# === Operations ===
+NotificationService.mark_as_read(notification_id, user)
+NotificationService.mark_all_as_read(user)
+NotificationService.soft_delete(notification_id, user)
+NotificationService.restore_from_trash(notification_id, user)
+NotificationService.empty_trash(user)
+NotificationService.archive_notification(notification_id, user)
+
+# === HTMX Helpers ===
+NotificationService.get_majors_for_targeting()
+NotificationService.get_levels_for_major(major_id)
+NotificationService.get_students_count(major_id, level_id, course_id)
+```
+
+**Backward Compatibility:**
+```python
+# NotificationManager alias still works for old code
+from apps.notifications.services import NotificationManager
+NotificationManager.create_file_upload_notification(file_obj, course)
+NotificationManager.get_unread_count(user)
+```
 
 **Views Structure:**
 ```
 apps/notifications/views/
-├── __init__.py
-├── common.py        # User notification views
-│   ├── NotificationListView
-│   ├── MarkAsReadView
-│   └── UnreadCountView (AJAX)
-├── instructor.py    # Instructor notification management
-└── admin.py         # Admin notification management
+├── __init__.py      # Exports all views
+├── common.py        # User-facing views (all roles)
+│   ├── NotificationListView (with filter tabs: all/unread/archived)
+│   ├── NotificationDetailView (auto mark-as-read + smart navigation)
+│   ├── NotificationTrashView (soft-deleted notifications)
+│   ├── MarkAsReadView / MarkAllAsReadView
+│   ├── DeleteNotificationView / RestoreNotificationView / EmptyTrashView
+│   ├── ArchiveNotificationView
+│   ├── UnreadCountView (JSON API for HTMX)
+│   └── PreferencesView (email notification settings)
+├── composer.py      # Notification creation (Admin/Instructor)
+│   ├── ComposerView (smart targeting with HTMX cascading dropdowns)
+│   └── SentNotificationsView
+└── htmx.py          # HTMX dynamic endpoints
+    ├── HtmxLevelsForMajor (cascading: Major -> Levels)
+    ├── HtmxStudentsCount (live recipient count)
+    ├── HtmxBellUpdate (Navbar bell polling every 30s)
+    └── HtmxSearchStudents (student search autocomplete)
 ```
+
+**URL Patterns:**
+```
+/notifications/              # List (with ?filter=all|unread|archived)
+/notifications/<pk>/         # Detail
+/notifications/<pk>/read/    # Mark as read
+/notifications/mark-all-read/# Mark all read
+/notifications/<pk>/delete/  # Soft delete
+/notifications/<pk>/restore/ # Restore from trash
+/notifications/<pk>/archive/ # Archive
+/notifications/trash/        # Trash view
+/notifications/trash/empty/  # Empty trash
+/notifications/compose/      # Composer (Admin/Instructor)
+/notifications/sent/         # Sent list
+/notifications/preferences/  # Email preferences
+/notifications/htmx/bell/   # HTMX bell update
+/notifications/htmx/levels/ # HTMX cascading dropdown
+/notifications/htmx/students-count/ # HTMX target count
+/notifications/htmx/search-students/ # HTMX student search
+```
+
+**Tests:** 35 tests covering Models, Services, Targeting Logic, Views, and HTMX endpoints
 
 ---
 
@@ -381,12 +479,16 @@ EnhancedFileService.delete_file(file_obj, user)
 EnhancedFileService.check_file_access(user, file_obj)
 ```
 
-### NotificationManager
+### NotificationService (v2)
 ```python
-NotificationManager.create_file_upload_notification(file_obj, course)
-NotificationManager.create_course_notification(sender, course, title, body)
-NotificationManager.get_unread_count(user)
-NotificationManager.get_user_notifications(user)
+from apps.notifications.services import NotificationService
+
+NotificationService.create_notification(title, body, recipients=users, ...)
+NotificationService.notify_file_upload(file_obj, course)
+NotificationService.notify_system(title, body, users=None)
+NotificationService.get_unread_count(user)
+NotificationService.get_user_notifications(user, filter_type='all')
+NotificationService.get_targeted_users(target_type='course_students', course=course)
 ```
 
 ---
@@ -440,7 +542,7 @@ Used for dynamic updates without full page reloads:
 - **Language:** Arabic (RTL) with English code
 - **Django Version:** 4.x
 - **Python Version:** 3.11+
-- **Last Updated:** January 2026
+- **Last Updated:** February 2026 (Notification System v2 rebuild)
 
 ---
 

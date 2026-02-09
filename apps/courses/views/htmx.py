@@ -216,18 +216,18 @@ def htmx_notifications(request):
              hx-swap="innerHTML">
         </div>
     """
-    from apps.notifications.models import NotificationManager
+    from apps.notifications.services import NotificationService
     
     user = request.user
-    notifications = NotificationManager.get_recent_notifications(user, limit=5)
-    unread_count = NotificationManager.get_unread_count(user)
+    notifications = NotificationService.get_recent_notifications(user, limit=5)
+    unread_count = NotificationService.get_unread_count(user)
     
     context = {
-        'notifications': notifications,
+        'recent_notifications': notifications,
         'unread_count': unread_count
     }
     
-    return render(request, 'partials/notifications_dropdown.html', context)
+    return render(request, 'notifications/partials/bell_dropdown.html', context)
 
 
 # ========== AI Features Partials ==========

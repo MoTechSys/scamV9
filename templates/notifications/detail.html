@@ -20,11 +20,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-bell me-2"></i>{{ notification.title }}</h6>
                 <div class="d-flex gap-2 align-items-center">
-                    {% if notification.priority == 'urgent' %}
-                    <span class="badge bg-danger">عاجل</span>
-                    {% elif notification.priority == 'high' %}
-                    <span class="badge bg-warning text-dark">مهم</span>
-                    {% endif %}
+                    <span class="badge bg-{{ notification.priority_color }}">{{ notification.get_priority_display }}</span>
                     <span class="badge bg-primary bg-opacity-10 text-primary">{{ notification.get_notification_type_display }}</span>
                 </div>
             </div>
@@ -36,6 +32,8 @@
                         <div class="avatar-circle" style="width:28px;height:28px;font-size:0.7rem;">{{ notification.sender.full_name|slice:":1"|upper }}</div>
                         <small class="text-muted">{{ notification.sender.full_name }}</small>
                     </div>
+                    {% else %}
+                    <small class="text-muted"><i class="bi bi-robot me-1"></i>إشعار تلقائي</small>
                     {% endif %}
                     <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ notification.created_at|date:"Y/m/d H:i" }}</small>
                     {% if notification.course %}
@@ -48,10 +46,14 @@
                     {{ notification.body|linebreaksbr }}
                 </div>
 
-                {% if notification.file %}
+                <!-- Related Object Link -->
+                {% if related_url %}
                 <div class="alert alert-info d-flex align-items-center gap-2">
-                    <i class="bi bi-file-earmark-text"></i>
-                    <span>ملف مرفق: <strong>{{ notification.file.title }}</strong></span>
+                    <i class="bi bi-link-45deg"></i>
+                    <span>هناك محتوى مرتبط بهذا الإشعار:</span>
+                    <a href="{{ related_url }}" class="btn btn-sm btn-primary ms-auto">
+                        <i class="bi bi-arrow-left me-1"></i>الانتقال إلى المحتوى
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -59,12 +61,20 @@
                 <a href="{% url 'notifications:list' %}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-right me-1"></i>رجوع للإشعارات
                 </a>
-                <form method="post" action="{% url 'notifications:delete' notification.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('هل تريد حذف هذا الإشعار؟')">
-                        <i class="bi bi-trash3 me-1"></i>حذف
-                    </button>
-                </form>
+                <div class="d-flex gap-2">
+                    <form method="post" action="{% url 'notifications:archive' notification.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-archive me-1"></i>أرشفة
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'notifications:delete' notification.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('هل تريد نقل هذا الإشعار إلى سلة المهملات؟')">
+                            <i class="bi bi-trash3 me-1"></i>حذف
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
