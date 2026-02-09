@@ -6330,3 +6330,29 @@
 [2026-02-09 04:18:55] INFO [django.server:213] "GET /student/dashboard/ HTTP/1.1" 200 19139
 [2026-02-09 04:18:57] INFO [django.server:213] "GET /student/courses/ HTTP/1.1" 200 15810
 [2026-02-09 04:19:27] ERROR [django.server:213] "GET /ai/usage/ HTTP/1.1" 500 117020
+[2026-02-09 04:23:29] INFO [django.server:213] "GET /instructor/dashboard/ HTTP/1.1" 200 22445
+[2026-02-09 04:23:31] INFO [django.server:213] "GET /instructor/files/upload/ HTTP/1.1" 200 19912
+[2026-02-09 04:23:35] INFO [django.server:213] "GET /instructor/dashboard/ HTTP/1.1" 200 22445
+[2026-02-09 04:23:36] INFO [django.server:213] "GET /instructor/ai/ HTTP/1.1" 200 23997
+[2026-02-09 04:23:42] INFO [django.server:213] "GET /instructor/trash/ HTTP/1.1" 200 17464
+[2026-02-09 04:23:44] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 16252
+[2026-02-09 04:23:49] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 16252
+[2026-02-09 04:23:53] INFO [django.server:213] "GET /accounts/profile/ HTTP/1.1" 200 9194
+[2026-02-09 04:23:53] INFO [django.server:213] "GET /static/css/style.css HTTP/1.1" 200 8221
+[2026-02-09 04:23:53] INFO [django.server:213] "GET /static/js/main.js HTTP/1.1" 200 9605
+[2026-02-09 04:23:53] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 04:24:05] INFO [django.server:213] "GET /instructor/dashboard/ HTTP/1.1" 200 22445
+[2026-02-09 04:24:28] INFO [django.server:213] "GET /accounts/profile/change-password/ HTTP/1.1" 200 7876
+[2026-02-09 04:24:28] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 04:24:58] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 04:25:16] INFO [django.server:213] "GET /instructor/courses/ HTTP/1.1" 200 18907
+[2026-02-09 04:25:23] INFO [django.server:213] "GET /instructor/dashboard/ HTTP/1.1" 200 22445
+[2026-02-09 04:25:27] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 16252
+[2026-02-09 04:45:28] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 16252
+[2026-02-09 04:47:02] INFO [django.server:213] "GET / HTTP/1.1" 200 8435
+[2026-02-09 04:47:02] INFO [django.server:213] "GET /static/css/style.css HTTP/1.1" 200 8221
+[2026-02-09 04:47:02] WARNING [django.server:213] "GET /favicon.ico HTTP/1.1" 404 4900
+[2026-02-09 04:47:04] INFO [django.server:213] "GET /accounts/login/ HTTP/1.1" 200 2992
+[2026-02-09 06:19:12] INFO [django.server:213] "GET /instructor/ai/ HTTP/1.1" 200 23997
+[2026-02-09 07:21:58] INFO [django.utils.autoreload:265] E:\v9\apps\core\context_processors.py changed, reloading.
+[2026-02-09 07:22:04] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
