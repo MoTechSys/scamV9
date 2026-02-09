@@ -6278,3 +6278,5 @@
 [2026-02-09 03:45:20] INFO [django.server:213] "GET /static/css/style.css HTTP/1.1" 304 0
 [2026-02-09 03:45:20] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
 [2026-02-09 03:45:38] WARNING [django.server:213] "GET /notifications/instructor_sent HTTP/1.1" 404 7880
+[2026-02-09 03:51:03] INFO [django.utils.autoreload:265] E:\v9\apps\notifications\views\instructor.py changed, reloading.
+[2026-02-09 03:51:04] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
