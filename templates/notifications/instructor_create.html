@@ -1,0 +1,27 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}إرسال إشعار - S-ACM{% endblock %}
+{% block page_title %}إرسال إشعار{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="border:none; border-radius:var(--radius,12px); box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,0.06));">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-megaphone me-2"></i>إرسال إشعار للطلاب</h5>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>إرسال</button>
+                <a href="{% url 'instructor:dashboard' %}" class="btn btn-outline-secondary">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

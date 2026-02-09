@@ -6239,3 +6239,42 @@
 [2026-02-09 03:32:33] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
 [2026-02-09 03:33:33] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
 [2026-02-09 03:34:33] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 03:35:11] INFO [django.utils.autoreload:265] E:\v9\apps\notifications\views\instructor.py changed, reloading.
+[2026-02-09 03:35:12] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
+[2026-02-09 03:35:33] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 03:36:13] INFO [django.utils.autoreload:667] Watching for file changes with StatReloader
+[2026-02-09 03:36:34] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 6054
+[2026-02-09 03:36:34] INFO [django.server:213] "GET /static/css/style.css HTTP/1.1" 200 8221
+[2026-02-09 03:36:34] INFO [django.server:213] "GET /static/js/main.js HTTP/1.1" 200 9605
+[2026-02-09 03:36:34] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 03:36:34] WARNING [django.server:213] "GET /favicon.ico HTTP/1.1" 404 4900
+[2026-02-09 03:36:40] INFO [django.server:213] "GET /courses/student/ HTTP/1.1" 200 10946
+[2026-02-09 03:36:40] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 03:36:53] INFO [django.server:213] "GET / HTTP/1.1" 200 8435
+[2026-02-09 03:36:53] INFO [django.server:213] "GET /static/css/style.css HTTP/1.1" 200 8221
+[2026-02-09 03:36:54] WARNING [django.server:213] "GET /favicon.ico HTTP/1.1" 404 4900
+[2026-02-09 03:36:55] INFO [django.server:213] "GET /accounts/login/ HTTP/1.1" 200 2992
+[2026-02-09 03:37:15] INFO [django.server:213] "POST /accounts/login/ HTTP/1.1" 302 0
+[2026-02-09 03:37:15] INFO [django.server:213] "GET /dashboard/ HTTP/1.1" 302 0
+[2026-02-09 03:37:15] INFO [django.server:213] "GET /instructor/dashboard/ HTTP/1.1" 200 22886
+[2026-02-09 03:37:20] INFO [django.server:213] "GET /instructor/courses/ HTTP/1.1" 200 18907
+[2026-02-09 03:37:31] INFO [django.server:213] "GET /instructor/courses/3/ HTTP/1.1" 200 20341
+[2026-02-09 03:37:33] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 6063
+[2026-02-09 03:37:33] INFO [django.server:213] "GET /static/js/main.js HTTP/1.1" 200 9605
+[2026-02-09 03:37:33] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 03:40:16] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 6063
+[2026-02-09 03:40:16] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 03:40:19] INFO [django.server:213] "GET /courses/instructor/courses/ HTTP/1.1" 200 9273
+[2026-02-09 03:40:19] INFO [django.server:213] "GET /static/css/instructor-panel.css HTTP/1.1" 200 7993
+[2026-02-09 03:40:19] INFO [django.server:213] "GET /static/js/instructor-panel.js HTTP/1.1" 200 1568
+[2026-02-09 03:40:19] INFO [django.server:213] "GET /static/vendor/bootstrap/bootstrap.rtl.min.css HTTP/1.1" 200 167209
+[2026-02-09 03:40:19] INFO [django.server:213] "GET /static/vendor/bootstrap/bootstrap.bundle.min.js HTTP/1.1" 200 80663
+[2026-02-09 03:40:26] ERROR [django.server:213] "GET /notifications/instructor/create/ HTTP/1.1" 500 124946
+[2026-02-09 03:40:29] INFO [django.server:213] "GET /courses/instructor/?tab=stats HTTP/1.1" 200 13505
+[2026-02-09 03:40:33] INFO [django.server:213] "GET /courses/instructor/ HTTP/1.1" 200 13505
+[2026-02-09 03:40:41] INFO [django.server:213] "GET /courses/instructor/courses/ HTTP/1.1" 200 9273
+[2026-02-09 03:45:10] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 03:45:20] INFO [django.server:213] "GET /notifications/ HTTP/1.1" 200 6063
+[2026-02-09 03:45:20] INFO [django.server:213] "GET /static/css/style.css HTTP/1.1" 304 0
+[2026-02-09 03:45:20] INFO [django.server:213] "GET /notifications/unread-count/ HTTP/1.1" 200 12
+[2026-02-09 03:45:38] WARNING [django.server:213] "GET /notifications/instructor_sent HTTP/1.1" 404 7880
