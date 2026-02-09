@@ -1,0 +1,28 @@
+/* تخصيص ألوان Django Admin الافتراضية باللون البنفسجي */
+:root {
+    --primary: #7c3aed;           /* اللون البنفسجي الأساسي للهيدر والعناوين */
+    --secondary: #6d28d9;         /* لون شريط التنقل */
+    --accent: #a855f7;            /* لون الروابط النشطة */
+    --primary-fg: #ffffff;        /* لون الخط فوق البنفسجي */
+}
+
+/* تغيير خلفية عناوين المجموعات (إدارة الحسابات، إدارة المقررات، إلخ) */
+.module h2, .module caption, .inline-group h2 {
+    background: var(--primary) !important;
+    color: var(--primary-fg) !important;
+}
+
+/* تغيير لون الهيدر العلوي (شريط S-ACM) */
+#header {
+    background: var(--secondary) !important;
+}
+
+/* تحسين شكل الأزرار لتناسب اللون الجديد */
+.button, input[type=submit], input[type=button] {
+    background: var(--primary) !important;
+    border: none !important;
+}
+
+.button:hover, input[type=submit]:hover {
+    background: var(--secondary) !important;
+}
