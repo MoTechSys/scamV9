@@ -880,12 +880,13 @@ class GeminiService:
         )
 
     def _generate_single_summary(self, text: str, max_length: int = 500, user_notes: str = "") -> str:
-        notes_section = f"\nملاحظات إضافية من المستخدم: {user_notes}" if user_notes else ""
+        notes_section = f"\n\nUSER_INSTRUCTION: {user_notes}" if user_notes else ""
         config = _get_ai_config()
         input_limit = config.chunk_size if config else FALLBACK_CHUNK_SIZE
 
-        prompt = f"""أنت مساعد أكاديمي متخصص في تلخيص المحتوى التعليمي باللغة العربية.
+        prompt = f"""ROLE: أنت مساعد أكاديمي خبير متخصص في تلخيص المحتوى التعليمي.
 
+TASK: تلخيص
 قم بتلخيص النص التالي بشكل مختصر ومفيد بصيغة Markdown. ركز على:
 - النقاط الرئيسية والمفاهيم الأساسية
 - المعلومات الأكثر أهمية
@@ -893,7 +894,10 @@ class GeminiService:
 - استخدام عناوين وقوائم لتنظيم المحتوى
 {notes_section}
 
-النص:
+OUTPUT_FORMAT: Markdown (مع عناوين وقوائم وتنسيق واضح)
+LANGUAGE: Arabic (ما لم يُحدد خلاف ذلك)
+
+CONTEXT:
 {text[:input_limit]}
 
 التلخيص (بحد أقصى {max_length} كلمة، بصيغة Markdown):"""
@@ -930,7 +934,7 @@ class GeminiService:
         if len(chunks) > 1:
             source_text = "\n\n---\n\n".join(chunks[:3])
 
-        notes_section = f"\nملاحظات: {user_notes}" if user_notes else ""
+        notes_section = f"\n\nUSER_INSTRUCTION: {user_notes}" if user_notes else ""
 
         parts = []
         if matrix.mcq_count > 0:
@@ -942,9 +946,10 @@ class GeminiService:
 
         matrix_text = "\n".join(parts)
 
-        prompt = f"""أنت مدرس جامعي متخصص في إنشاء أسئلة اختبارية باللغة العربية.
+        prompt = f"""ROLE: أنت مدرس جامعي خبير متخصص في إنشاء أسئلة اختبارية أكاديمية.
 
-أنشئ الأسئلة التالية بالضبط من النص المقدم:
+TASK: توليد أسئلة اختبارية
+CONFIG:
 {matrix_text}
 
 إجمالي: {matrix.total_questions} سؤال | الدرجة الكلية: {matrix.total_score}
@@ -1034,10 +1039,11 @@ class GeminiService:
         if len(chunks) > 1:
             context = self._find_relevant_chunks(chunks, question)
 
-        notes_section = f"\nسياق إضافي: {user_notes}" if user_notes else ""
+        notes_section = f"\n\nUSER_INSTRUCTION: {user_notes}" if user_notes else ""
 
-        prompt = f"""أنت مساعد أكاديمي يجيب على الأسئلة بناءً على محتوى المستندات.
+        prompt = f"""ROLE: أنت مساعد أكاديمي خبير يجيب على الأسئلة بناءً على محتوى المستندات.
 
+TASK: الإجابة على سؤال أكاديمي
 قواعد:
 1. أجب بناءً على المحتوى المقدم فقط
 2. إذا لم تجد الإجابة، قل ذلك بوضوح
@@ -1046,7 +1052,10 @@ class GeminiService:
 5. استخدم صيغة Markdown في الإجابة
 {notes_section}
 
-المحتوى:
+OUTPUT_FORMAT: Markdown
+LANGUAGE: Arabic (ما لم يُحدد خلاف ذلك)
+
+CONTEXT:
 {context}
 
 السؤال: {question}

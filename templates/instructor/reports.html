@@ -1,0 +1,351 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}التقارير - S-ACM{% endblock %}
+{% block page_title %}التقارير والإحصائيات{% endblock %}
+
+{% block extra_styles %}
+.report-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: var(--bg-body, #f1f5f9);
+    border-radius: var(--radius, 12px);
+    margin-bottom: 24px;
+}
+.report-tab {
+    flex: 1;
+    text-align: center;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-secondary, #64748b);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+.report-tab:hover {
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--primary, #6366f1);
+}
+.report-tab.active {
+    background: var(--bg-card, #fff);
+    color: var(--primary, #6366f1);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+}
+.mini-stat {
+    text-align: center;
+    padding: 16px;
+    border-radius: var(--radius-sm, 8px);
+}
+.mini-stat .value { font-size: 1.6rem; font-weight: 800; }
+.mini-stat .label { font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; }
+@media (max-width: 767.98px) {
+    .report-tabs { flex-direction: column; gap: 2px; }
+    .report-tab { padding: 10px 12px; font-size: 0.85rem; }
+}
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- Navigation Tabs -->
+<div class="report-tabs">
+    <a href="?tab=overview" class="report-tab {% if active_tab == 'overview' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i>
+        <span>نظرة عامة</span>
+    </a>
+    <a href="?tab=courses" class="report-tab {% if active_tab == 'courses' %}active{% endif %}">
+        <i class="bi bi-book"></i>
+        <span>المقررات</span>
+    </a>
+    <a href="?tab=files" class="report-tab {% if active_tab == 'files' %}active{% endif %}">
+        <i class="bi bi-file-earmark-bar-graph"></i>
+        <span>الملفات</span>
+    </a>
+    <a href="?tab=students" class="report-tab {% if active_tab == 'students' %}active{% endif %}">
+        <i class="bi bi-people"></i>
+        <span>نشاط الطلاب</span>
+    </a>
+    <a href="?tab=ai" class="report-tab {% if active_tab == 'ai' %}active{% endif %}">
+        <i class="bi bi-robot"></i>
+        <span>عمليات AI</span>
+    </a>
+</div>
+
+<!-- ============ OVERVIEW ============ -->
+{% if active_tab == 'overview' %}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card bg-gradient-primary">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><div class="stat-value">{{ file_stats.total_files|default:0 }}</div><div class="stat-label">إجمالي الملفات</div></div>
+                <i class="bi bi-file-earmark stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card bg-gradient-success">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><div class="stat-value">{{ file_stats.total_downloads|default:0 }}</div><div class="stat-label">إجمالي التحميلات</div></div>
+                <i class="bi bi-download stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card bg-gradient-info">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><div class="stat-value">{{ file_stats.total_views|default:0 }}</div><div class="stat-label">إجمالي المشاهدات</div></div>
+                <i class="bi bi-eye stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card bg-gradient-warning">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><div class="stat-value">{{ ai_stats.total_jobs|default:0 }}</div><div class="stat-label">عمليات AI</div></div>
+                <i class="bi bi-robot stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Statistics -->
+<div class="card mb-4">
+    <div class="card-header bg-transparent py-3" style="border-bottom:1px solid var(--border-color);">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-robot me-2" style="color:var(--primary);"></i>إحصائيات الذكاء الاصطناعي</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-4 col-md-2">
+                <div class="mini-stat" style="background:rgba(99,102,241,0.08);">
+                    <div class="value" style="color:var(--primary);">{{ ai_stats.completed_jobs|default:0 }}</div>
+                    <div class="label">مكتملة</div>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="mini-stat" style="background:rgba(239,68,68,0.08);">
+                    <div class="value" style="color:var(--danger);">{{ ai_stats.failed_jobs|default:0 }}</div>
+                    <div class="label">فاشلة</div>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="mini-stat" style="background:rgba(34,197,94,0.08);">
+                    <div class="value" style="color:var(--success);">{{ ai_stats.total_summaries|default:0 }}</div>
+                    <div class="label">ملخصات</div>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="mini-stat" style="background:rgba(14,165,233,0.08);">
+                    <div class="value" style="color:var(--secondary);">{{ ai_stats.total_questions|default:0 }}</div>
+                    <div class="label">أسئلة</div>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="mini-stat" style="background:rgba(245,158,11,0.08);">
+                    <div class="value" style="color:var(--warning);">{{ courses|length }}</div>
+                    <div class="label">مقررات</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Course Summary -->
+<div class="card">
+    <div class="card-header bg-transparent py-3" style="border-bottom:1px solid var(--border-color);">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-book me-2" style="color:var(--primary);"></i>ملخص المقررات</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr><th>#</th><th>المقرر</th><th>الملفات</th><th>التحميلات</th><th>المشاهدات</th><th>الطلاب</th></tr>
+            </thead>
+            <tbody>
+                {% for r in course_reports %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ r.course.course_code }}</strong> - {{ r.course.course_name }}</td>
+                    <td><span class="badge bg-primary">{{ r.file_count }}</span></td>
+                    <td>{{ r.downloads }}</td>
+                    <td>{{ r.views }}</td>
+                    <td><span class="badge bg-success">{{ r.students }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">لا توجد مقررات</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ============ COURSES TAB ============ -->
+{% elif active_tab == 'courses' %}
+<div class="card">
+    <div class="card-header bg-transparent py-3" style="border-bottom:1px solid var(--border-color);">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-book me-2" style="color:var(--primary);"></i>تقرير المقررات التفصيلي</h6>
+    </div>
+    <div class="card-body p-0">
+        {% for r in course_reports %}
+        <div class="d-flex align-items-center gap-3 p-3" style="border-bottom:1px solid var(--border-color);">
+            <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width:48px;height:48px;border-radius:12px;background:rgba(99,102,241,0.1);color:var(--primary);">
+                <i class="bi bi-book fs-5"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="mb-1 fw-bold" style="font-size:0.95rem;">{{ r.course.course_code }} - {{ r.course.course_name }}</h6>
+                <div class="d-flex gap-3 flex-wrap">
+                    <small class="text-muted"><i class="bi bi-file-earmark me-1"></i>{{ r.file_count }} ملف</small>
+                    <small class="text-muted"><i class="bi bi-download me-1"></i>{{ r.downloads }} تحميل</small>
+                    <small class="text-muted"><i class="bi bi-eye me-1"></i>{{ r.views }} مشاهدة</small>
+                    <small class="text-muted"><i class="bi bi-people me-1"></i>{{ r.students }} طالب</small>
+                </div>
+            </div>
+            <a href="{% url 'instructor:student_roster' course_pk=r.course.pk %}" class="btn btn-sm btn-outline-primary" style="border-radius:8px;">
+                <i class="bi bi-people me-1"></i>الطلاب
+            </a>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-book fs-1 d-block mb-2" style="opacity:0.3;"></i>
+            <p>لا توجد مقررات مسندة لك حالياً</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ============ FILES TAB ============ -->
+{% elif active_tab == 'files' %}
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-transparent py-3" style="border-bottom:1px solid var(--border-color);">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-download me-2 text-success"></i>الأكثر تحميلاً</h6>
+            </div>
+            <div class="card-body p-0">
+                {% for f in top_downloaded %}
+                <div class="d-flex align-items-center gap-2 p-3" style="border-bottom:1px solid var(--border-color);">
+                    <span class="badge bg-success" style="min-width:28px;">{{ forloop.counter }}</span>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="font-size:0.9rem;">{{ f.title }}</div>
+                        <small class="text-muted">{{ f.course.course_code }}</small>
+                    </div>
+                    <span class="badge bg-success bg-opacity-10 text-success">{{ f.download_count }} <i class="bi bi-download"></i></span>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">لا توجد تحميلات</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-transparent py-3" style="border-bottom:1px solid var(--border-color);">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2 text-info"></i>الأكثر مشاهدة</h6>
+            </div>
+            <div class="card-body p-0">
+                {% for f in top_viewed %}
+                <div class="d-flex align-items-center gap-2 p-3" style="border-bottom:1px solid var(--border-color);">
+                    <span class="badge bg-info" style="min-width:28px;">{{ forloop.counter }}</span>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="font-size:0.9rem;">{{ f.title }}</div>
+                        <small class="text-muted">{{ f.course.course_code }}</small>
+                    </div>
+                    <span class="badge bg-info bg-opacity-10 text-info">{{ f.view_count }} <i class="bi bi-eye"></i></span>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">لا توجد مشاهدات</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ STUDENTS TAB ============ -->
+{% elif active_tab == 'students' %}
+<div class="card">
+    <div class="card-header bg-transparent py-3" style="border-bottom:1px solid var(--border-color);">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-people me-2" style="color:var(--primary);"></i>تقرير نشاط الطلاب</h6>
+            <form class="d-flex gap-2" method="get">
+                <input type="hidden" name="tab" value="students">
+                <select name="course_id" class="form-select form-select-sm" style="min-width:200px;border-radius:8px;" onchange="this.form.submit()">
+                    <option value="">-- اختر المقرر --</option>
+                    {% for c in courses %}
+                    <option value="{{ c.pk }}" {% if selected_course and selected_course.pk == c.pk %}selected{% endif %}>{{ c.course_code }} - {{ c.course_name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+    {% if student_activity %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>#</th><th>الطالب</th><th>الرقم الأكاديمي</th><th>المشاهدات</th><th>التحميلات</th><th>استخدام AI</th></tr></thead>
+            <tbody>
+                {% for s in student_activity %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ s.full_name }}</strong></td>
+                    <td><code>{{ s.academic_id }}</code></td>
+                    <td>{{ s.view_count }}</td>
+                    <td>{{ s.download_count }}</td>
+                    <td>{{ s.ai_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-people fs-1 d-block mb-2" style="opacity:0.3;"></i>
+        <p>اختر مقرراً لعرض نشاط الطلاب</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ============ AI TAB ============ -->
+{% elif active_tab == 'ai' %}
+<div class="card">
+    <div class="card-header bg-transparent py-3" style="border-bottom:1px solid var(--border-color);">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-robot me-2" style="color:var(--primary);"></i>سجل عمليات الذكاء الاصطناعي</h6>
+    </div>
+    <div class="card-body p-0">
+        {% for job in recent_ai_jobs %}
+        <div class="d-flex align-items-center gap-3 p-3" style="border-bottom:1px solid var(--border-color);">
+            <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px;height:40px;border-radius:10px;
+                {% if job.status == 'completed' %}background:rgba(34,197,94,0.1);color:#22c55e;
+                {% elif job.status == 'failed' %}background:rgba(239,68,68,0.1);color:#ef4444;
+                {% elif job.status == 'processing' %}background:rgba(245,158,11,0.1);color:#f59e0b;
+                {% else %}background:rgba(100,116,139,0.1);color:#64748b;{% endif %}">
+                {% if job.job_type == 'summary' %}<i class="bi bi-file-text"></i>
+                {% elif job.job_type == 'questions' %}<i class="bi bi-question-circle"></i>
+                {% else %}<i class="bi bi-robot"></i>{% endif %}
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h6 class="mb-0 fw-semibold" style="font-size:0.9rem;">{{ job.get_job_type_display }} - {{ job.file.title|truncatechars:40 }}</h6>
+                    <span class="badge {% if job.status == 'completed' %}bg-success{% elif job.status == 'failed' %}bg-danger{% elif job.status == 'processing' %}bg-warning{% else %}bg-secondary{% endif %}" style="font-size:0.7rem;">
+                        {{ job.get_status_display }}
+                    </span>
+                </div>
+                <div class="d-flex gap-3 mt-1">
+                    <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ job.created_at|timesince }} مضت</small>
+                    {% if job.file.course %}<small class="text-muted"><i class="bi bi-book me-1"></i>{{ job.file.course.course_code }}</small>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-robot fs-1 d-block mb-2" style="opacity:0.3;"></i>
+            <p>لا توجد عمليات AI مسجلة</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

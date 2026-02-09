@@ -38,6 +38,12 @@ urlpatterns = [
     path('roster/<int:course_pk>/', views.StudentRosterView.as_view(), name='student_roster'),
     path('roster/<int:course_pk>/export/', views.RosterExportExcelView.as_view(), name='roster_export_excel'),
 
+    # Reports
+    path('reports/', views.InstructorReportsView.as_view(), name='reports'),
+
+    # Settings
+    path('settings/', views.InstructorSettingsView.as_view(), name='settings'),
+
     # AJAX
     path('api/course-files/', views.CourseFilesAjaxView.as_view(), name='course_files_ajax'),
 ]
