@@ -19,26 +19,29 @@ def site_settings(request):
 
 
 def user_notifications(request):
-    # نرجع صفر مؤقتاً لتفادي خطأ قاعدة البيانات
-    return {'unread_count': 0}
-
-'''def user_notifications(request):
     """
-    إضافة عدد الإشعارات غير المقروءة
+    إضافة عدد الإشعارات غير المقروءة + آخر 5 إشعارات للـ Navbar dropdown
     """
     if request.user.is_authenticated:
-        from apps.notifications.models import Notification
-        unread_count = Notification.objects.filter(
-            user=request.user,
-            is_read=False
-        ).count()
-        return {
-            'unread_notifications_count': unread_count
-        }
-    return {
-        'unread_notifications_count': 0
-    }
-'''
+        try:
+            from apps.notifications.models import NotificationRecipient
+            unread_qs = NotificationRecipient.objects.filter(
+                user=request.user,
+                is_read=False,
+                is_deleted=False,
+                notification__is_active=True
+            ).select_related('notification', 'notification__sender')
+            
+            unread_count = unread_qs.count()
+            recent_notifications = unread_qs.order_by('-notification__created_at')[:5]
+            
+            return {
+                'unread_count': unread_count,
+                'recent_notifications': recent_notifications,
+            }
+        except Exception:
+            pass
+    return {'unread_count': 0, 'recent_notifications': []}
 
 
 

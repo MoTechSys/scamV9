@@ -164,8 +164,11 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@s-acm.com')
 
-# Google Gemini API
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+# Google Gemini AI API
+# Reads GEMINI_API_KEY first, falls back to OPENAI_API_KEY for backward compatibility
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '') or os.getenv('OPENAI_API_KEY', '')
+AI_MODEL_NAME = os.getenv('AI_MODEL_NAME', 'gemini-2.5-flash')
+OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/')
 
 # AI Rate Limiting (requests per hour per user)
 AI_RATE_LIMIT_PER_HOUR = int(os.getenv('AI_RATE_LIMIT_PER_HOUR', 10))
@@ -179,6 +182,11 @@ ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
 # Session Settings
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Security Hardening (Always-on)
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 # =============================================================================
 # Logging Configuration

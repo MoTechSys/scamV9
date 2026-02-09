@@ -39,7 +39,7 @@ logger = logging.getLogger('ai_features')
 
 
 # ========== Constants (Fallbacks - DB config takes priority) ==========
-FALLBACK_MODEL = "gemini-2.0-flash"
+FALLBACK_MODEL = getattr(settings, 'AI_MODEL_NAME', None) or os.getenv('AI_MODEL_NAME', 'gemini-2.5-flash')
 FALLBACK_CHUNK_SIZE = 30000
 FALLBACK_CHUNK_OVERLAP = 500
 FALLBACK_MAX_OUTPUT_TOKENS = 2000

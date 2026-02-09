@@ -50,17 +50,21 @@ class AIConfiguration(models.Model):
     """
 
     MODEL_CHOICES = [
-        ('gemini-2.0-flash', 'Gemini 2.0 Flash (سريع)'),
+        ('gemini-2.5-flash', 'Gemini 2.5 Flash (سريع - مُوصى به)'),
+        ('gemini-2.5-pro', 'Gemini 2.5 Pro (متقدم)'),
+        ('gemini-2.0-flash', 'Gemini 2.0 Flash (مستقر)'),
         ('gemini-1.5-flash', 'Gemini 1.5 Flash (متوازن)'),
         ('gemini-1.5-pro', 'Gemini 1.5 Pro (دقيق)'),
         ('gemini-2.0-pro', 'Gemini 2.0 Pro (متقدم)'),
+        ('gemini-3-flash-preview', 'Gemini 3 Flash Preview (تجريبي - أسرع)'),
+        ('gemini-3-pro-preview', 'Gemini 3 Pro Preview (تجريبي - ذكاء فائق)'),
     ]
 
     # --- Model Selection ---
     active_model = models.CharField(
         max_length=50,
         choices=MODEL_CHOICES,
-        default='gemini-2.0-flash',
+        default='gemini-2.5-flash',
         verbose_name='النموذج النشط',
         help_text='نموذج Gemini المستخدم لجميع عمليات AI'
     )
@@ -81,10 +85,10 @@ class AIConfiguration(models.Model):
 
     # --- Output Configuration ---
     max_output_tokens = models.PositiveIntegerField(
-        default=2000,
-        validators=[MinValueValidator(100), MaxValueValidator(8192)],
+        default=8192,
+        validators=[MinValueValidator(100), MaxValueValidator(65536)],
         verbose_name='حد التوكنات للإخراج',
-        help_text='الحد الأقصى لعدد التوكنات في استجابة AI (100-8192)'
+        help_text='الحد الأقصى لعدد التوكنات في استجابة AI (100-65536)'
     )
     temperature = models.FloatField(
         default=0.3,
