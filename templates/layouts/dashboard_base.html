@@ -3,7 +3,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <meta name="description" content="S-ACM - نظام إدارة المحتوى الأكاديمي الذكي">
     <title>{% block title %}S-ACM{% endblock %}</title>
 
@@ -11,6 +11,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Mobile App CSS -->
+    <link href="{% static 'css/mobile-app.css' %}" rel="stylesheet">
+    <!-- iOS PWA Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#ffffff">
+    <!-- Viewport with safe area -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
     <style>
         :root {
@@ -474,10 +483,142 @@
             {% block dashboard_content %}{% endblock %}
         </main>
 
-        <!-- Footer -->
+        <!-- Footer (hidden on mobile via CSS) -->
         <footer class="dashboard-footer">
             <small>&copy; 2026 S-ACM Enterprise - نظام إدارة المحتوى الأكاديمي الذكي</small>
         </footer>
+    </div>
+
+    <!-- ==========================================
+         MOBILE BOTTOM NAVIGATION BAR
+         ========================================== -->
+    <nav class="mobile-bottom-nav d-lg-none" id="mobileBottomNav">
+        {% if is_instructor %}
+        <a href="{% url 'instructor:dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+            <span class="nav-icon-wrapper">
+                <i class="bi bi-speedometer2 nav-icon"></i>
+            </span>
+            <span class="nav-label">الرئيسية</span>
+        </a>
+        <a href="{% url 'instructor:course_list' %}" class="nav-item {% if active_page == 'courses' %}active{% endif %}">
+            <span class="nav-icon-wrapper">
+                <i class="bi bi-book nav-icon"></i>
+            </span>
+            <span class="nav-label">المقررات</span>
+        </a>
+        <a href="{% url 'notifications:management' %}" class="nav-item {% if active_page == 'notifications' %}active{% endif %}">
+            <span class="nav-icon-wrapper">
+                <i class="bi bi-bell nav-icon"></i>
+            </span>
+            <span class="nav-label">الإشعارات</span>
+            {% if unread_count and unread_count > 0 %}
+            <span class="nav-badge">{{ unread_count }}</span>
+            {% endif %}
+        </a>
+        <button class="nav-item" onclick="toggleMobileDrawer()" type="button">
+            <span class="nav-icon-wrapper">
+                <i class="bi bi-grid nav-icon"></i>
+            </span>
+            <span class="nav-label">المزيد</span>
+        </button>
+        {% elif is_student %}
+        <a href="{% url 'student:dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+            <span class="nav-icon-wrapper">
+                <i class="bi bi-speedometer2 nav-icon"></i>
+            </span>
+            <span class="nav-label">الرئيسية</span>
+        </a>
+        <a href="{% url 'student:course_list' %}" class="nav-item {% if active_page == 'courses' %}active{% endif %}">
+            <span class="nav-icon-wrapper">
+                <i class="bi bi-book nav-icon"></i>
+            </span>
+            <span class="nav-label">المقررات</span>
+        </a>
+        <a href="{% url 'notifications:management' %}" class="nav-item {% if active_page == 'notifications' %}active{% endif %}">
+            <span class="nav-icon-wrapper">
+                <i class="bi bi-bell nav-icon"></i>
+            </span>
+            <span class="nav-label">الإشعارات</span>
+            {% if unread_count and unread_count > 0 %}
+            <span class="nav-badge">{{ unread_count }}</span>
+            {% endif %}
+        </a>
+        <button class="nav-item" onclick="toggleMobileDrawer()" type="button">
+            <span class="nav-icon-wrapper">
+                <i class="bi bi-grid nav-icon"></i>
+            </span>
+            <span class="nav-label">المزيد</span>
+        </button>
+        {% endif %}
+    </nav>
+
+    <!-- ==========================================
+         MOBILE DRAWER (More Menu - Slide from Bottom)
+         ========================================== -->
+    <div class="mobile-drawer-overlay d-lg-none" id="mobileDrawerOverlay" onclick="toggleMobileDrawer()"></div>
+    <div class="mobile-drawer d-lg-none" id="mobileDrawer">
+        <div class="drawer-handle"></div>
+        <div class="drawer-header">
+            <h3>المزيد</h3>
+            <button class="drawer-close" onclick="toggleMobileDrawer()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="drawer-body">
+            <div class="drawer-grid">
+                {% if is_instructor %}
+                <a href="{% url 'instructor:ai_hub' %}" class="drawer-grid-item {% if active_page == 'ai_hub' %}active{% endif %}">
+                    <i class="bi bi-robot"></i>
+                    <span>مركز AI</span>
+                </a>
+                <a href="{% url 'instructor:reports' %}" class="drawer-grid-item {% if active_page == 'reports' %}active{% endif %}">
+                    <i class="bi bi-bar-chart-line"></i>
+                    <span>التقارير</span>
+                </a>
+                <a href="{% url 'instructor:trash_list' %}" class="drawer-grid-item {% if active_page == 'trash' %}active{% endif %}">
+                    <i class="bi bi-trash3"></i>
+                    <span>المهملات</span>
+                </a>
+                <a href="{% url 'instructor:settings' %}" class="drawer-grid-item {% if active_page == 'settings' %}active{% endif %}">
+                    <i class="bi bi-gear"></i>
+                    <span>الإعدادات</span>
+                </a>
+                <a href="{% url 'accounts:profile' %}" class="drawer-grid-item">
+                    <i class="bi bi-person"></i>
+                    <span>الملف الشخصي</span>
+                </a>
+                <a href="{% url 'accounts:logout' %}" class="drawer-grid-item" style="color: var(--mobile-danger);">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>خروج</span>
+                </a>
+                {% elif is_student %}
+                <a href="{% url 'student:ai_center' %}" class="drawer-grid-item {% if active_page == 'ai_center' %}active{% endif %}">
+                    <i class="bi bi-stars"></i>
+                    <span>مركز AI</span>
+                </a>
+                <a href="{% url 'ai_features:usage_stats' %}" class="drawer-grid-item">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>إحصائيات AI</span>
+                </a>
+                <a href="{% url 'student:settings' %}" class="drawer-grid-item {% if active_page == 'settings' %}active{% endif %}">
+                    <i class="bi bi-gear"></i>
+                    <span>الإعدادات</span>
+                </a>
+                <a href="{% url 'accounts:profile' %}" class="drawer-grid-item">
+                    <i class="bi bi-person"></i>
+                    <span>الملف الشخصي</span>
+                </a>
+                <a href="{% url 'accounts:change_password' %}" class="drawer-grid-item">
+                    <i class="bi bi-key"></i>
+                    <span>كلمة المرور</span>
+                </a>
+                <a href="{% url 'accounts:logout' %}" class="drawer-grid-item" style="color: var(--mobile-danger);">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>خروج</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
@@ -517,6 +658,73 @@
                 if (bsAlert) bsAlert.close();
             });
         }, 5000);
+
+        // === Mobile Drawer Toggle ===
+        function toggleMobileDrawer() {
+            const drawer = document.getElementById('mobileDrawer');
+            const overlay = document.getElementById('mobileDrawerOverlay');
+            if (drawer && overlay) {
+                drawer.classList.toggle('show');
+                overlay.classList.toggle('show');
+                // Prevent body scroll when drawer is open
+                if (drawer.classList.contains('show')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+
+        // === Mobile Drawer Swipe-to-Close ===
+        (function() {
+            const drawer = document.getElementById('mobileDrawer');
+            if (!drawer) return;
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            drawer.addEventListener('touchstart', function(e) {
+                // Only start drag from the handle area (top 50px)
+                if (e.touches[0].clientY - drawer.getBoundingClientRect().top < 50) {
+                    startY = e.touches[0].clientY;
+                    isDragging = true;
+                    drawer.style.transition = 'none';
+                }
+            }, { passive: true });
+
+            drawer.addEventListener('touchmove', function(e) {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+                const diff = currentY - startY;
+                if (diff > 0) {
+                    drawer.style.transform = `translateY(${diff}px)`;
+                }
+            }, { passive: true });
+
+            drawer.addEventListener('touchend', function() {
+                if (!isDragging) return;
+                isDragging = false;
+                drawer.style.transition = '';
+                const diff = currentY - startY;
+                if (diff > 100) {
+                    toggleMobileDrawer();
+                }
+                drawer.style.transform = '';
+                startY = 0;
+                currentY = 0;
+            }, { passive: true });
+        })();
+
+        // === Highlight Active Bottom Nav Item ===
+        (function() {
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.mobile-bottom-nav .nav-item[href]').forEach(function(item) {
+                const href = item.getAttribute('href');
+                if (href && currentPath.startsWith(href)) {
+                    item.classList.add('active');
+                }
+            });
+        })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>
