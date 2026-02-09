@@ -1,0 +1,38 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}جميع الإشعارات - S-ACM{% endblock %}
+{% block page_title %}إدارة الإشعارات{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-bell me-2"></i>جميع الإشعارات</h5>
+    <a href="{% url 'notifications:admin_create' %}" class="btn btn-sm btn-primary" style="border-radius:8px;">
+        <i class="bi bi-plus-lg me-1"></i>إشعار جديد
+    </a>
+</div>
+
+<div class="card" style="border:none; border-radius:var(--radius,12px); box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,0.06));">
+    {% for notification in notifications %}
+    <div class="d-flex align-items-start gap-3 p-3" style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,0.1);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-bell"></i>
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-1 fw-semibold" style="font-size:0.95rem;">{{ notification.title }}</h6>
+            <p class="mb-1 text-muted" style="font-size:0.85rem;">{{ notification.body|truncatechars:100 }}</p>
+            <div class="d-flex gap-3">
+                <small class="text-muted"><i class="bi bi-person me-1"></i>{{ notification.sender.full_name|default:"النظام" }}</small>
+                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ notification.created_at|timesince }} مضت</small>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-5">
+        <div style="width:80px;height:80px;border-radius:50%;background:rgba(100,116,139,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <i class="bi bi-bell-slash fs-1" style="color:#94a3b8;"></i>
+        </div>
+        <h5 class="fw-bold">لا توجد إشعارات</h5>
+        <a href="{% url 'notifications:admin_create' %}" class="btn btn-primary mt-2"><i class="bi bi-plus-lg me-1"></i>إرسال إشعار</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

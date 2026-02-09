@@ -31,7 +31,7 @@ class AdminNotificationCreateView(LoginRequiredMixin, AdminRequiredMixin, Create
     """
     model = Notification
     form_class = NotificationForm
-    template_name = 'admin_panel/notifications/create.html'
+    template_name = 'notifications/admin_create.html'
     success_url = reverse_lazy('notifications:admin_list')
     
     def form_valid(self, form):
@@ -72,7 +72,7 @@ class AdminNotificationListView(LoginRequiredMixin, AdminRequiredMixin, ListView
     تعرض جميع الإشعارات للأدمن مع إمكانية الترقيم.
     """
     model = Notification
-    template_name = 'admin_panel/notifications/list.html'
+    template_name = 'notifications/admin_list.html'
     context_object_name = 'notifications'
     paginate_by = 20
     

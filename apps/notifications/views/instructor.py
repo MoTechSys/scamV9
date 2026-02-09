@@ -28,7 +28,7 @@ class InstructorNotificationCreateView(LoginRequiredMixin, InstructorRequiredMix
     """
     model = Notification
     form_class = CourseNotificationForm
-    template_name = 'instructor_panel/notifications/create.html'
+    template_name = 'notifications/instructor_create.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -55,7 +55,7 @@ class InstructorNotificationCreateView(LoginRequiredMixin, InstructorRequiredMix
         )
         
         messages.success(self.request, 'تم إرسال الإشعار بنجاح.')
-        return redirect('courses:instructor_course_detail', pk=course.pk)
+        return redirect('instructor:course_detail', pk=course.pk)
 
 
 class InstructorNotificationListView(LoginRequiredMixin, InstructorRequiredMixin, ListView):
@@ -64,7 +64,7 @@ class InstructorNotificationListView(LoginRequiredMixin, InstructorRequiredMixin
     
     تعرض جميع الإشعارات التي أنشأها المدرس الحالي.
     """
-    template_name = 'instructor_panel/notifications/list.html'
+    template_name = 'notifications/instructor_sent.html'
     context_object_name = 'notifications'
     paginate_by = 20
     
