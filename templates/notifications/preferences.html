@@ -1,0 +1,73 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}إعدادات الإشعارات - S-ACM{% endblock %}
+{% block page_title %}إعدادات الإشعارات{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{% url 'notifications:list' %}">الإشعارات</a></li>
+        <li class="breadcrumb-item active">الإعدادات</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card" style="border:none;border-radius:var(--radius,12px);box-shadow:var(--shadow-sm);">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4">
+                    <i class="bi bi-gear me-2" style="color:var(--primary,#6366f1);"></i>
+                    إعدادات الإشعارات
+                </h5>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <!-- التفعيل الرئيسي -->
+                    <div class="d-flex justify-content-between align-items-center p-3 mb-4" style="background:var(--bg-body,#f1f5f9);border-radius:var(--radius-sm,8px);">
+                        <div>
+                            <h6 class="mb-0 fw-bold">إشعارات البريد الإلكتروني</h6>
+                            <small class="text-muted">تفعيل أو تعطيل جميع إشعارات البريد</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.email_enabled }}
+                        </div>
+                    </div>
+
+                    <h6 class="fw-semibold mb-3 text-muted">أنواع الإشعارات</h6>
+
+                    {% for field in form %}
+                    {% if field.name != 'email_enabled' %}
+                    <div class="d-flex justify-content-between align-items-center py-3" style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                        <label class="form-check-label fw-semibold" for="{{ field.id_for_label }}">
+                            {% if 'file_upload' in field.name %}<i class="bi bi-file-earmark-plus me-2 text-primary"></i>
+                            {% elif 'announcement' in field.name %}<i class="bi bi-megaphone me-2 text-warning"></i>
+                            {% elif 'assignment' in field.name %}<i class="bi bi-journal-check me-2 text-purple"></i>
+                            {% elif 'exam' in field.name %}<i class="bi bi-clipboard-data me-2 text-danger"></i>
+                            {% elif 'grade' in field.name %}<i class="bi bi-award me-2 text-success"></i>
+                            {% elif 'system' in field.name %}<i class="bi bi-gear me-2 text-secondary"></i>
+                            {% endif %}
+                            {{ field.label }}
+                        </label>
+                        <div class="form-check form-switch">
+                            {{ field }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>حفظ الإعدادات
+                        </button>
+                        <a href="{% url 'notifications:list' %}" class="btn btn-outline-secondary">رجوع</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

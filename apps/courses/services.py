@@ -102,75 +102,36 @@ class FileService:
             return f"{size_bytes / (1024 * 1024):.1f} ميجابايت"
 
 
-class NotificationService:
-    """خدمة الإشعارات"""
+class CourseNotificationService:
+    """
+    خدمة إشعارات المقررات - تُعيد التوجيه إلى NotificationService المركزي
+    (التوافق الخلفي - Backward Compatibility)
+    """
     
     @classmethod
     def notify_new_file(cls, file_obj):
-        """
-        إرسال إشعار عند رفع ملف جديد
-        """
-        from apps.notifications.models import Notification
-        from apps.accounts.models import User
-        
-        course = file_obj.course
-        
-        # الحصول على جميع الطلاب المسجلين في التخصصات المرتبطة بالمقرر
-        majors = course.course_majors.values_list('major_id', flat=True)
-        students = User.objects.filter(
-            role__role_name='student',
-            major_id__in=majors,
-            level=course.level,
-            account_status='active'
-        )
-        
-        # إنشاء إشعار لكل طالب
-        notifications = []
-        for student in students:
-            notifications.append(Notification(
-                user=student,
-                title=f"ملف جديد في {course.course_name}",
-                body=f"تم رفع ملف جديد: {file_obj.title}",
-                notification_type='new_file',
-                related_course=course
-            ))
-        
-        if notifications:
-            Notification.objects.bulk_create(notifications)
-        
-        return len(notifications)
+        """إرسال إشعار عند رفع ملف جديد"""
+        from apps.notifications.services import NotificationService
+        notification = NotificationService.notify_file_upload(file_obj, file_obj.course)
+        return notification.recipients.count() if notification else 0
     
     @classmethod
     def notify_announcement(cls, title, body, course=None, target_role=None):
-        """
-        إرسال إعلان عام
-        """
-        from apps.notifications.models import Notification
-        from apps.accounts.models import User
-        
-        users = User.objects.filter(account_status='active')
-        
+        """إرسال إعلان عام"""
+        from apps.notifications.services import NotificationService
         if target_role:
-            users = users.filter(role__role_name=target_role)
-        
-        if course:
-            majors = course.course_majors.values_list('major_id', flat=True)
-            users = users.filter(major_id__in=majors, level=course.level)
-        
-        notifications = []
-        for user in users:
-            notifications.append(Notification(
-                user=user,
-                title=title,
-                body=body,
-                notification_type='info',
-                related_course=course
-            ))
-        
-        if notifications:
-            Notification.objects.bulk_create(notifications)
-        
-        return len(notifications)
+            target_type = 'all_students' if target_role == 'student' else 'all_instructors'
+        else:
+            target_type = 'everyone'
+        recipients = NotificationService.get_targeted_users(
+            target_type=target_type, course=course
+        )
+        notification = NotificationService.create_notification(
+            title=title, body=body,
+            notification_type='announcement',
+            course=course, recipients=recipients,
+        )
+        return notification.recipients.count() if notification else 0
 
 
 class ArchiveService:
@@ -540,7 +501,7 @@ class EnhancedFileService:
         """
         from .models import LectureFile
         from apps.accounts.models import UserActivity
-        from apps.notifications.models import NotificationManager
+        from apps.notifications.services import NotificationService
         
         try:
             file_obj = LectureFile.objects.create(
@@ -563,7 +524,7 @@ class EnhancedFileService:
             )
             
             if file_obj.is_visible:
-                NotificationManager.create_file_upload_notification(file_obj, course)
+                NotificationService.notify_file_upload(file_obj, course)
             
             logger.info(f"File uploaded: {file_obj.title} by {uploader.academic_id}")
             
@@ -611,13 +572,13 @@ class EnhancedFileService:
         """
         تبديل ظهور الملف
         """
-        from apps.notifications.models import NotificationManager
+        from apps.notifications.services import NotificationService
         
         file_obj.is_visible = not file_obj.is_visible
         file_obj.save()
         
         if file_obj.is_visible:
-            NotificationManager.create_file_upload_notification(file_obj, file_obj.course)
+            NotificationService.notify_file_upload(file_obj, file_obj.course)
         
         logger.info(
             f"File visibility toggled: {file_obj.title} -> "

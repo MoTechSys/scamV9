@@ -196,7 +196,7 @@ MENU_ITEMS = [
         code='notifications_management',
         icon='bi-megaphone',
         label='إرسال إشعارات',
-        url_name='notifications:admin_create',
+        url_name='notifications:compose',
         required_perm='send_notifications',
         order=130,
     ),

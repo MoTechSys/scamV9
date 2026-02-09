@@ -21,20 +21,15 @@ def site_settings(request):
 def user_notifications(request):
     """
     إضافة عدد الإشعارات غير المقروءة + آخر 5 إشعارات للـ Navbar dropdown
+    يستخدم NotificationService المركزي
     """
     if request.user.is_authenticated:
         try:
-            from apps.notifications.models import NotificationRecipient
-            unread_qs = NotificationRecipient.objects.filter(
-                user=request.user,
-                is_read=False,
-                is_deleted=False,
-                notification__is_active=True
-            ).select_related('notification', 'notification__sender')
-            
-            unread_count = unread_qs.count()
-            recent_notifications = unread_qs.order_by('-notification__created_at')[:5]
-            
+            from apps.notifications.services import NotificationService
+            unread_count = NotificationService.get_unread_count(request.user)
+            recent_notifications = NotificationService.get_recent_notifications(
+                request.user, limit=5
+            )
             return {
                 'unread_count': unread_count,
                 'recent_notifications': recent_notifications,

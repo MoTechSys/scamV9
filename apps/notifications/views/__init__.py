@@ -1,44 +1,53 @@
 """
-Views Package - حزمة عروض الإشعارات
+Views Package - نظام الإشعارات v2
 S-ACM - Smart Academic Content Management System
-
-تصدير جميع الـ Views للتوافق مع urls.py
 """
 
-# Common Views - العمليات المشتركة
 from .common import (
     NotificationListView,
     NotificationDetailView,
+    NotificationTrashView,
     MarkAsReadView,
     MarkAllAsReadView,
     DeleteNotificationView,
+    RestoreNotificationView,
+    EmptyTrashView,
+    ArchiveNotificationView,
     UnreadCountView,
+    PreferencesView,
 )
 
-# Instructor Views - عروض المدرس
-from .instructor import (
-    InstructorNotificationCreateView,
-    InstructorNotificationListView,
+from .composer import (
+    ComposerView,
+    SentNotificationsView,
 )
 
-# Admin Views - عروض الأدمن
-from .admin import (
-    AdminNotificationCreateView,
-    AdminNotificationListView,
+from .htmx import (
+    HtmxLevelsForMajor,
+    HtmxStudentsCount,
+    HtmxBellUpdate,
+    HtmxSearchStudents,
 )
 
 __all__ = [
     # Common
     'NotificationListView',
     'NotificationDetailView',
+    'NotificationTrashView',
     'MarkAsReadView',
     'MarkAllAsReadView',
     'DeleteNotificationView',
+    'RestoreNotificationView',
+    'EmptyTrashView',
+    'ArchiveNotificationView',
     'UnreadCountView',
-    # Instructor
-    'InstructorNotificationCreateView',
-    'InstructorNotificationListView',
-    # Admin
-    'AdminNotificationCreateView',
-    'AdminNotificationListView',
+    'PreferencesView',
+    # Composer
+    'ComposerView',
+    'SentNotificationsView',
+    # HTMX
+    'HtmxLevelsForMajor',
+    'HtmxStudentsCount',
+    'HtmxBellUpdate',
+    'HtmxSearchStudents',
 ]

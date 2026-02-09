@@ -1,0 +1,65 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}سلة المهملات - الإشعارات - S-ACM{% endblock %}
+{% block page_title %}سلة مهملات الإشعارات{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item"><a href="{% url 'notifications:list' %}">الإشعارات</a></li>
+        <li class="breadcrumb-item active">سلة المهملات</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="mb-1 fw-bold"><i class="bi bi-trash3 me-2"></i>سلة المهملات</h5>
+        <small class="text-muted">الإشعارات المحذوفة يمكن استعادتها أو حذفها نهائياً</small>
+    </div>
+    {% if notifications %}
+    <form method="post" action="{% url 'notifications:empty_trash' %}" onsubmit="return confirm('هل تريد إفراغ سلة المهملات نهائياً؟ لا يمكن التراجع عن هذا الإجراء.')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-danger" style="border-radius:8px;">
+            <i class="bi bi-trash3-fill me-1"></i>إفراغ السلة
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="card" style="border:none;border-radius:var(--radius,12px);box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,0.06));">
+    {% for nr in notifications %}
+    <div class="d-flex align-items-center gap-3 p-3" style="border-bottom:1px solid var(--border-color,#e2e8f0);opacity:0.8;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(100,116,139,0.1);color:#64748b;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-bell"></i>
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-0 fw-semibold" style="font-size:0.95rem;">{{ nr.notification.title }}</h6>
+            <small class="text-muted">{{ nr.notification.body|truncatechars:80 }}</small><br>
+            <small class="text-muted"><i class="bi bi-clock me-1"></i>حُذف {{ nr.deleted_at|timesince }} مضت</small>
+        </div>
+        <div class="d-flex gap-1">
+            <form method="post" action="{% url 'notifications:restore' nr.notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius:8px;" title="استعادة">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-5">
+        <div style="width:80px;height:80px;border-radius:50%;background:rgba(100,116,139,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <i class="bi bi-trash3 fs-1" style="color:#94a3b8;"></i>
+        </div>
+        <h5 class="fw-bold">سلة المهملات فارغة</h5>
+        <p class="text-muted mb-0">لا توجد إشعارات محذوفة</p>
+        <a href="{% url 'notifications:list' %}" class="btn btn-outline-primary mt-3">
+            <i class="bi bi-arrow-right me-1"></i>رجوع للإشعارات
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
