@@ -40,9 +40,9 @@ class FileDownloadView(SecureFileDownloadMixin, View):
             )
             messages.error(request, str(e) if str(e) else 'ليس لديك صلاحية الوصول لهذا الملف.')
             if user.is_student():
-                return redirect('courses:student_dashboard')
+                return redirect('student:dashboard')
             elif user.is_instructor():
-                return redirect('courses:instructor_dashboard')
+                return redirect('instructor:dashboard')
             return redirect('core:dashboard_redirect')
         
         # زيادة عداد التحميل
@@ -73,7 +73,7 @@ class FileDownloadView(SecureFileDownloadMixin, View):
             return response
         
         messages.error(request, 'الملف غير موجود.')
-        return redirect('courses:student_dashboard')
+        return redirect('core:dashboard_redirect')
 
 
 class FileViewView(SecureFileDownloadMixin, View):
@@ -93,7 +93,7 @@ class FileViewView(SecureFileDownloadMixin, View):
                 f"Reason: {str(e)}"
             )
             messages.error(request, str(e) if str(e) else 'ليس لديك صلاحية الوصول لهذا الملف.')
-            return redirect('courses:student_dashboard')
+            return redirect('core:dashboard_redirect')
         
         # زيادة عداد المشاهدة
         file_obj.increment_view()

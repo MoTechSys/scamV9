@@ -1,99 +1,125 @@
-{% extends 'base.html' %}
+{% extends 'layouts/dashboard_base.html' %}
 {% load static %}
 
 {% block title %}الإشعارات - S-ACM{% endblock %}
+{% block page_title %}الإشعارات{% endblock %}
 
-{% block content %}
+{% block dashboard_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-bell me-2"></i>الإشعارات</h2>
+    <div>
+        <h5 class="mb-1 fw-bold"><i class="bi bi-bell me-2"></i>الإشعارات</h5>
+        {% if unread_count %}
+        <small class="text-muted">لديك <span class="text-danger fw-bold">{{ unread_count }}</span> إشعار غير مقروء</small>
+        {% else %}
+        <small class="text-muted">جميع الإشعارات مقروءة</small>
+        {% endif %}
+    </div>
     {% if notifications %}
     <form method="post" action="{% url 'notifications:mark_all_read' %}">
         {% csrf_token %}
-        <button type="submit" class="btn btn-outline-primary btn-sm">
+        <button type="submit" class="btn btn-sm btn-outline-primary" style="border-radius: var(--radius-sm, 8px);">
             <i class="bi bi-check-all me-1"></i>تحديد الكل كمقروء
         </button>
     </form>
     {% endif %}
 </div>
 
-<div class="card">
-    <div class="card-body p-0">
-        {% for notification in notifications %}
-        <div class="notification-item p-3 border-bottom {% if not notification.is_read %}bg-light{% endif %}" data-notification-id="{{ notification.pk }}">
-            <div class="d-flex">
-                <div class="notification-icon me-3">
-                    {% if notification.notification_type == 'info' %}
-                    <i class="bi bi-info-circle text-info fs-4"></i>
-                    {% elif notification.notification_type == 'warning' %}
-                    <i class="bi bi-exclamation-triangle text-warning fs-4"></i>
-                    {% elif notification.notification_type == 'success' %}
-                    <i class="bi bi-check-circle text-success fs-4"></i>
-                    {% elif notification.notification_type == 'new_file' %}
-                    <i class="bi bi-file-earmark-plus text-primary fs-4"></i>
-                    {% else %}
-                    <i class="bi bi-bell text-secondary fs-4"></i>
-                    {% endif %}
-                </div>
-                <div class="notification-content flex-grow-1">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <h6 class="mb-1 {% if not notification.is_read %}fw-bold{% endif %}">
-                            {{ notification.title }}
-                        </h6>
-                        <small class="text-muted">{{ notification.created_at|timesince }} مضت</small>
-                    </div>
-                    <p class="mb-1 text-muted">{{ notification.body }}</p>
-                    {% if notification.related_course %}
-                    <small class="text-primary">
-                        <i class="bi bi-book me-1"></i>{{ notification.related_course.course_name }}
-                    </small>
-                    {% endif %}
-                </div>
-                <div class="notification-actions ms-2">
-                    {% if not notification.is_read %}
-                    <form method="post" action="{% url 'notifications:mark_read' notification.pk %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-success" title="تحديد كمقروء">
-                            <i class="bi bi-check"></i>
-                        </button>
-                    </form>
-                    {% endif %}
-                    <form method="post" action="{% url 'notifications:delete' notification.pk %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف" data-confirm="هل تريد حذف هذا الإشعار؟">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </form>
-                </div>
+<!-- Notifications List -->
+<div class="card" style="border: none; border-radius: var(--radius, 12px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));">
+    {% for notification in notifications %}
+    <div class="d-flex align-items-start gap-3 p-3 {% if not notification.is_read %}bg-primary bg-opacity-10{% endif %}" style="border-bottom: 1px solid var(--border-color, #e2e8f0); transition: background 0.2s;" onmouseenter="this.style.background='rgba(99,102,241,0.05)'" onmouseleave="this.style.background='{% if not notification.is_read %}rgba(99,102,241,0.1){% else %}transparent{% endif %}'">
+        <!-- Icon -->
+        <div class="flex-shrink-0">
+            <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+                {% if notification.notification_type == 'info' %}background:rgba(14,165,233,0.1); color:#0ea5e9;
+                {% elif notification.notification_type == 'warning' %}background:rgba(245,158,11,0.1); color:#f59e0b;
+                {% elif notification.notification_type == 'success' %}background:rgba(34,197,94,0.1); color:#22c55e;
+                {% elif notification.notification_type == 'new_file' %}background:rgba(99,102,241,0.1); color:#6366f1;
+                {% else %}background:rgba(100,116,139,0.1); color:#64748b;{% endif %}">
+                {% if notification.notification_type == 'info' %}
+                <i class="bi bi-info-circle fs-5"></i>
+                {% elif notification.notification_type == 'warning' %}
+                <i class="bi bi-exclamation-triangle fs-5"></i>
+                {% elif notification.notification_type == 'success' %}
+                <i class="bi bi-check-circle fs-5"></i>
+                {% elif notification.notification_type == 'new_file' %}
+                <i class="bi bi-file-earmark-plus fs-5"></i>
+                {% else %}
+                <i class="bi bi-bell fs-5"></i>
+                {% endif %}
             </div>
         </div>
-        {% empty %}
-        <div class="text-center py-5">
-            <i class="bi bi-bell-slash display-1 text-muted"></i>
-            <h4 class="mt-3 text-muted">لا توجد إشعارات</h4>
-            <p class="text-muted">ستظهر هنا الإشعارات الجديدة</p>
+
+        <!-- Content -->
+        <div class="flex-grow-1 min-w-0">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <h6 class="mb-0 {% if not notification.is_read %}fw-bold{% else %}fw-semibold{% endif %}" style="font-size:0.95rem; color: var(--text-primary, #1e293b);">
+                    {% if not notification.is_read %}<span class="d-inline-block rounded-circle bg-primary me-1" style="width:8px; height:8px;"></span>{% endif %}
+                    {{ notification.title }}
+                </h6>
+                <small class="text-muted flex-shrink-0 ms-2" style="font-size:0.75rem;">
+                    <i class="bi bi-clock me-1"></i>{{ notification.created_at|timesince }} مضت
+                </small>
+            </div>
+            <p class="mb-1 text-muted" style="font-size:0.875rem; line-height:1.5;">{{ notification.body|truncatechars:150 }}</p>
+            {% if notification.related_course %}
+            <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.7rem; font-weight:600; border-radius:6px;">
+                <i class="bi bi-book me-1"></i>{{ notification.related_course.course_name }}
+            </span>
+            {% endif %}
         </div>
-        {% endfor %}
+
+        <!-- Actions -->
+        <div class="flex-shrink-0 d-flex gap-1">
+            {% if not notification.is_read %}
+            <form method="post" action="{% url 'notifications:mark_read' notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="width:32px; height:32px; border-radius:8px; padding:0; display:flex; align-items:center; justify-content:center; background:rgba(34,197,94,0.1); color:#22c55e; border:none;" title="تحديد كمقروء">
+                    <i class="bi bi-check2"></i>
+                </button>
+            </form>
+            {% endif %}
+            <form method="post" action="{% url 'notifications:delete' notification.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="width:32px; height:32px; border-radius:8px; padding:0; display:flex; align-items:center; justify-content:center; background:rgba(239,68,68,0.1); color:#ef4444; border:none;" title="حذف" onclick="return confirm('هل تريد حذف هذا الإشعار؟')">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </form>
+        </div>
     </div>
-    
+    {% empty %}
+    <div class="text-center py-5">
+        <div style="width:80px; height:80px; border-radius:50%; background:rgba(100,116,139,0.1); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+            <i class="bi bi-bell-slash fs-1" style="color:#94a3b8;"></i>
+        </div>
+        <h5 class="fw-bold" style="color: var(--text-primary, #1e293b);">لا توجد إشعارات</h5>
+        <p class="text-muted mb-0" style="font-size:0.9rem;">ستظهر هنا الإشعارات الجديدة عند وصولها</p>
+    </div>
+    {% endfor %}
+
     {% if notifications.has_other_pages %}
-    <div class="card-footer">
+    <div class="p-3" style="border-top: 1px solid var(--border-color, #e2e8f0);">
         <nav>
-            <ul class="pagination justify-content-center mb-0">
+            <ul class="pagination justify-content-center mb-0" style="gap:4px;">
                 {% if notifications.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ notifications.previous_page_number }}">السابق</a>
+                    <a class="page-link" href="?page={{ notifications.previous_page_number }}" style="border-radius:8px; border:1px solid var(--border-color, #e2e8f0); color: var(--text-primary, #1e293b);">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
                 </li>
                 {% endif %}
                 
                 {% for num in notifications.paginator.page_range %}
                 <li class="page-item {% if notifications.number == num %}active{% endif %}">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    <a class="page-link" href="?page={{ num }}" style="border-radius:8px; {% if notifications.number == num %}background: var(--primary, #6366f1); border-color: var(--primary, #6366f1); color:#fff;{% else %}border:1px solid var(--border-color, #e2e8f0); color: var(--text-primary, #1e293b);{% endif %}">{{ num }}</a>
                 </li>
                 {% endfor %}
                 
                 {% if notifications.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ notifications.next_page_number }}">التالي</a>
+                    <a class="page-link" href="?page={{ notifications.next_page_number }}" style="border-radius:8px; border:1px solid var(--border-color, #e2e8f0); color: var(--text-primary, #1e293b);">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
                 </li>
                 {% endif %}
             </ul>
