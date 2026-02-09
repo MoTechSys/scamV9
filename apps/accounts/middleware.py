@@ -66,11 +66,11 @@ class RoleBasedRedirectMiddleware:
         role_code = user.role.code if user.role else None
         
         if role_code == Role.ADMIN:
-            return reverse('accounts:admin_dashboard')
+            return reverse('core:dashboard_redirect')
         elif role_code == Role.INSTRUCTOR:
-            return reverse('courses:instructor_dashboard')
+            return reverse('instructor:dashboard')
         elif role_code == Role.STUDENT:
-            return reverse('courses:student_dashboard')
+            return reverse('student:dashboard')
         else:
             return reverse('core:home')
 

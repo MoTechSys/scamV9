@@ -135,14 +135,14 @@ def course_access_required(view_func):
             if course.instructor_courses.filter(instructor=request.user).exists():
                 return view_func(request, *args, **kwargs)
             messages.error(request, 'لست معيناً لهذا المقرر')
-            return redirect('courses:instructor_dashboard')
+            return redirect('instructor:dashboard')
         
         # الطالب يجب أن يكون في التخصص والمستوى المناسب
         if user_role == Role.STUDENT:
             if course.course_majors.filter(major=request.user.major).exists():
                 return view_func(request, *args, **kwargs)
             messages.error(request, 'هذا المقرر ليس ضمن تخصصك')
-            return redirect('courses:student_dashboard')
+            return redirect('student:dashboard')
         
         return HttpResponseForbidden('ليس لديك صلاحية الوصول')
     
