@@ -215,6 +215,31 @@
                 {% else %}
                     <iframe src="{{ file.external_link }}" style="height:100%;"></iframe>
                 {% endif %}
+            {% elif file.is_image %}
+                <div class="img-viewer">
+                    <img src="{% url 'streaming:stream_file' file.pk %}" alt="{{ file.title }}" onclick="toggleZoom(this)" ondblclick="openLightbox(this.src)">
+                </div>
+            {% elif file.file_extension in '.txt,.md,.csv,.rst' %}
+                <div class="md-viewer" id="textContent">
+                    <div class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-primary"></div> جاري تحميل المحتوى...
+                    </div>
+                </div>
+            {% elif file.file_extension in '.docx,.doc,.pptx,.ppt,.xlsx,.xls' %}
+                <div class="md-viewer">
+                    <div class="text-center py-5">
+                        <i class="bi bi-file-earmark-richtext fs-1 d-block mb-3" style="color:#818cf8;"></i>
+                        <h5>{{ file.title }}</h5>
+                        <p class="text-muted">نوع الملف: {{ file.file_extension|upper }}</p>
+                        <p class="text-muted small">هذا النوع من الملفات لا يمكن عرضه مباشرة في المتصفح</p>
+                        <a href="{% url 'courses:file_download' file.pk %}" class="btn btn-primary btn-lg mt-2">
+                            <i class="bi bi-download me-2"></i>تحميل الملف للعرض
+                        </a>
+                        <div class="mt-3">
+                            <small class="text-muted">يمكنك استخدام المساعد الذكي على اليسار لطرح أسئلة حول محتوى الملف</small>
+                        </div>
+                    </div>
+                </div>
             {% else %}
                 <div class="file-preview">
                     <i class="bi {% if file.file_extension == '.docx' or file.file_extension == '.doc' %}bi-file-earmark-word{% elif file.file_extension == '.pptx' or file.file_extension == '.ppt' %}bi-file-earmark-ppt{% elif file.file_extension == '.xlsx' or file.file_extension == '.xls' %}bi-file-earmark-excel{% else %}bi-file-earmark{% endif %}"></i>
@@ -301,6 +326,22 @@
         if (typeof marked !== 'undefined') {
             marked.setOptions({ breaks: true, gfm: true });
         }
+
+        // Configure marked for Markdown rendering
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                sanitize: false
+            });
+        }
+
+        // Render all existing markdown messages on load
+        document.querySelectorAll('.chat-msg.bot .md-content').forEach(el => {
+            if (typeof marked !== 'undefined') {
+                el.innerHTML = marked.parse(el.textContent || el.innerText);
+            }
+        });
 
         function scrollToBottom() {
             chatArea.scrollTop = chatArea.scrollHeight;
