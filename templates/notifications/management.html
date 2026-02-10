@@ -128,19 +128,35 @@
 /* Responsive */
 @media (max-width: 767.98px) {
     .notif-tabs {
-        flex-direction: column;
-        gap: 2px;
+        flex-direction: row !important;
+        gap: 4px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
     }
+    .notif-tabs::-webkit-scrollbar { display: none; }
     .notif-tab {
-        padding: 10px 12px;
-        font-size: 0.85rem;
+        padding: 10px 14px;
+        font-size: 0.8rem;
+        flex: 0 0 auto;
+        white-space: nowrap;
     }
+    .notif-tab span { display: none; }
+    .notif-tab i { font-size: 1.1rem; }
+    .notif-tab.active span { display: inline; }
     .notif-item {
         padding: 12px;
     }
     .notif-actions {
         opacity: 1;
-        flex-direction: column;
+        flex-direction: row !important;
+        gap: 4px;
+    }
+    .notif-actions .action-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
     }
 }
 {% endblock %}

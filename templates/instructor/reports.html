@@ -48,8 +48,24 @@
 .mini-stat .value { font-size: 1.6rem; font-weight: 800; }
 .mini-stat .label { font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; }
 @media (max-width: 767.98px) {
-    .report-tabs { flex-direction: column; gap: 2px; }
-    .report-tab { padding: 10px 12px; font-size: 0.85rem; }
+    .report-tabs { 
+        flex-direction: row !important; 
+        gap: 4px; 
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
+    }
+    .report-tabs::-webkit-scrollbar { display: none; }
+    .report-tab { 
+        padding: 10px 14px; 
+        font-size: 0.8rem; 
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+    .report-tab span { display: none; }
+    .report-tab i { font-size: 1.1rem; }
+    .report-tab.active span { display: inline; }
 }
 {% endblock %}
 
@@ -161,7 +177,8 @@
     <div class="card-header bg-transparent py-3" style="border-bottom:1px solid var(--border-color);">
         <h6 class="mb-0 fw-bold"><i class="bi bi-book me-2" style="color:var(--primary);"></i>ملخص المقررات</h6>
     </div>
-    <div class="table-responsive">
+    {# Desktop: Table #}
+    <div class="d-none d-md-block table-responsive">
         <table class="table table-hover mb-0">
             <thead>
                 <tr><th>#</th><th>المقرر</th><th>الملفات</th><th>التحميلات</th><th>المشاهدات</th><th>الطلاب</th></tr>
@@ -181,6 +198,22 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+    {# Mobile: Card View #}
+    <div class="d-block d-md-none">
+        {% for r in course_reports %}
+        <div class="p-3 border-bottom">
+            <div class="fw-bold mb-1" style="font-size:0.9rem;">{{ r.course.course_code }} - {{ r.course.course_name|truncatechars:30 }}</div>
+            <div class="d-flex gap-3 flex-wrap">
+                <span class="badge bg-primary-subtle text-primary"><i class="bi bi-file-earmark me-1"></i>{{ r.file_count }} ملف</span>
+                <span class="badge bg-success-subtle text-success"><i class="bi bi-download me-1"></i>{{ r.downloads }}</span>
+                <span class="badge bg-info-subtle text-info"><i class="bi bi-eye me-1"></i>{{ r.views }}</span>
+                <span class="badge bg-warning-subtle text-dark"><i class="bi bi-people me-1"></i>{{ r.students }}</span>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4">لا توجد مقررات</div>
+        {% endfor %}
     </div>
 </div>
 

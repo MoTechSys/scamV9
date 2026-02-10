@@ -43,7 +43,8 @@
                 </select>
                 <button type="submit" class="btn btn-sm btn-outline-primary">تنفيذ</button>
             </div>
-            <div class="table-responsive">
+            {# Desktop: Table View #}
+            <div class="d-none d-md-block table-responsive">
                 <table class="table table-hover mb-0">
                     <thead><tr><th width="30"></th><th>الملف</th><th>النوع</th><th>الحالة</th><th>المشاهدات</th><th>التحميلات</th><th>إجراءات</th></tr></thead>
                     <tbody>
@@ -72,6 +73,33 @@
                     {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            {# Mobile: Card View #}
+            <div class="d-block d-md-none scrollable-list">
+                {% for file in all_files %}
+                <div class="p-3 border-bottom">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="d-flex align-items-center">
+                            <input class="form-check-input file-check" type="checkbox" name="file_ids" value="{{ file.pk }}" style="margin:0;">
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-bold text-truncate" style="font-size:0.9rem;">{{ file.title|truncatechars:35 }}</div>
+                            <div class="d-flex gap-2 mt-1 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary" style="font-size:0.6rem;">{{ file.get_file_type_display }}</span>
+                                {% if file.is_visible %}<span class="badge bg-success-subtle text-success" style="font-size:0.6rem;">مرئي</span>
+                                {% else %}<span class="badge bg-warning-subtle text-warning" style="font-size:0.6rem;">مخفي</span>{% endif %}
+                                <small class="text-muted" style="font-size:0.65rem;"><i class="bi bi-eye me-1"></i>{{ file.view_count }}</small>
+                                <small class="text-muted" style="font-size:0.65rem;"><i class="bi bi-download me-1"></i>{{ file.download_count }}</small>
+                            </div>
+                            <div class="d-flex gap-1 mt-2">
+                                <form method="post" action="{% url 'instructor:file_toggle_visibility' file.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;"><i class="bi bi-eye{% if not file.is_visible %}-slash{% endif %}"></i></button></form>
+                                <a href="{% url 'instructor:file_update' file.pk %}" class="btn btn-sm btn-outline-primary" style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;"><i class="bi bi-pencil"></i></a>
+                                <form method="post" action="{% url 'instructor:file_delete' file.pk %}" class="d-inline" onsubmit="return confirm('نقل للمهملات؟')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;"><i class="bi bi-trash"></i></button></form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </form>
         {% else %}
