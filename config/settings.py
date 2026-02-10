@@ -164,14 +164,17 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'noreply@s-acm.com')
 
-# Google Gemini AI API
-# Reads GEMINI_API_KEY first, falls back to OPENAI_API_KEY for backward compatibility
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '') or os.getenv('OPENAI_API_KEY', '')
-AI_MODEL_NAME = os.getenv('AI_MODEL_NAME', 'gemini-2.5-flash')
-OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/')
+# Manus API Proxy (OpenAI-compatible)
+# Single API key from environment - no DB key rotation needed
+MANUS_API_KEY = os.getenv('MANUS_API_KEY', '')
+MANUS_BASE_URL = os.getenv('MANUS_BASE_URL', 'https://api.manus.im/api/llm-proxy/v1')
+AI_MODEL_NAME = os.getenv('AI_MODEL_NAME', 'gpt-4.1-mini')
 
-# AI Rate Limiting (requests per hour per user)
-AI_RATE_LIMIT_PER_HOUR = int(os.getenv('AI_RATE_LIMIT_PER_HOUR', 10))
+# Legacy keys (kept for backward compat, but Manus is primary)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
+# AI Rate Limiting - disabled by default (unlimited usage)
+AI_RATE_LIMIT_PER_HOUR = int(os.getenv('AI_RATE_LIMIT_PER_HOUR', 9999))
 
 # File Upload Settings
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB

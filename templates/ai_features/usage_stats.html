@@ -13,12 +13,9 @@
                 <div>
                     <div class="stat-label">الاستخدام هذه الساعة</div>
                     <div class="stat-value">{{ stats.hourly_usage }}</div>
-                    <small>من {{ stats.rate_limit }} متاح</small>
+                    <small>طلب - غير محدود</small>
                 </div>
                 <i class="bi bi-clock-history stat-icon"></i>
-            </div>
-            <div class="progress mt-2" style="height:4px;background:rgba(255,255,255,0.2);">
-                <div class="progress-bar bg-white" style="width:{% widthratio stats.hourly_usage stats.rate_limit 100 %}%"></div>
             </div>
         </div>
     </div>
@@ -69,16 +66,16 @@
     </div>
     <div class="col-md-4">
         <div class="card p-4 text-center">
-            <i class="bi bi-speedometer2 text-success mb-2" style="font-size:2rem;"></i>
-            <h3 class="fw-bold">{{ stats.rate_limit }}</h3>
-            <span class="text-muted">الحد المسموح/ساعة</span>
+            <i class="bi bi-infinity text-success mb-2" style="font-size:2rem;"></i>
+            <h3 class="fw-bold">∞</h3>
+            <span class="text-muted">بلا حدود</span>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card p-4 text-center">
             <i class="bi bi-lightning-charge text-warning mb-2" style="font-size:2rem;"></i>
-            <h3 class="fw-bold">{% widthratio stats.hourly_usage stats.rate_limit 100 %}%</h3>
-            <span class="text-muted">نسبة الاستخدام</span>
+            <h3 class="fw-bold">{{ stats.daily_usage }}</h3>
+            <span class="text-muted">طلب اليوم</span>
         </div>
     </div>
 </div>

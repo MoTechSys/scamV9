@@ -50,23 +50,21 @@ class AIConfiguration(models.Model):
     """
 
     MODEL_CHOICES = [
-        ('gemini-2.5-flash', 'Gemini 2.5 Flash (سريع - مُوصى به)'),
-        ('gemini-2.5-pro', 'Gemini 2.5 Pro (متقدم)'),
-        ('gemini-2.0-flash', 'Gemini 2.0 Flash (مستقر)'),
-        ('gemini-1.5-flash', 'Gemini 1.5 Flash (متوازن)'),
-        ('gemini-1.5-pro', 'Gemini 1.5 Pro (دقيق)'),
-        ('gemini-2.0-pro', 'Gemini 2.0 Pro (متقدم)'),
-        ('gemini-3-flash-preview', 'Gemini 3 Flash Preview (تجريبي - أسرع)'),
-        ('gemini-3-pro-preview', 'Gemini 3 Pro Preview (تجريبي - ذكاء فائق)'),
+        ('gpt-4.1-mini', 'GPT-4.1 Mini (افتراضي - مُوصى به)'),
+        ('gpt-4.1-nano', 'GPT-4.1 Nano (خفيف وسريع)'),
+        ('gemini-2.5-flash', 'Gemini 2.5 Flash (عبر Manus Proxy)'),
+        ('gemini-2.5-pro', 'Gemini 2.5 Pro (متقدم - عبر Manus)'),
+        ('gpt-4o', 'GPT-4o (متقدم)'),
+        ('gpt-4o-mini', 'GPT-4o Mini (سريع)'),
     ]
 
     # --- Model Selection ---
     active_model = models.CharField(
         max_length=50,
         choices=MODEL_CHOICES,
-        default='gemini-2.5-flash',
+        default='gpt-4.1-mini',
         verbose_name='النموذج النشط',
-        help_text='نموذج Gemini المستخدم لجميع عمليات AI'
+        help_text='نموذج AI المستخدم لجميع العمليات (عبر Manus API Proxy)'
     )
 
     # --- Chunking Configuration ---
@@ -182,8 +180,8 @@ class APIKey(models.Model):
     """
 
     PROVIDER_CHOICES = [
-        ('gemini', 'Google Gemini'),
-        ('openai', 'OpenAI (مستقبلي)'),
+        ('manus', 'Manus API Proxy (OpenAI Compatible)'),
+        ('openai', 'OpenAI Direct'),
     ]
 
     STATUS_CHOICES = [
@@ -203,7 +201,7 @@ class APIKey(models.Model):
     provider = models.CharField(
         max_length=20,
         choices=PROVIDER_CHOICES,
-        default='gemini',
+        default='manus',
         verbose_name='المزود'
     )
 

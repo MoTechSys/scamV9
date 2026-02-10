@@ -21,29 +21,15 @@ from apps.accounts.views import StudentRequiredMixin
 
 
 class AIRateLimitMixin:
-    """Mixin للتحقق من حد الاستخدام"""
+    """Mixin للتحقق من حد الاستخدام - بلا حدود"""
     
     def check_rate_limit(self, user):
-        """التحقق من عدم تجاوز حد الاستخدام"""
-        one_hour_ago = timezone.now() - timedelta(hours=1)
-        usage_count = AIUsageLog.objects.filter(
-            user=user,
-            request_time__gte=one_hour_ago
-        ).count()
-        
-        limit = getattr(settings, 'AI_RATE_LIMIT_PER_HOUR', 10)
-        return usage_count < limit
+        """Always returns True - no rate limit enforced"""
+        return True
     
     def get_remaining_requests(self, user):
-        """الحصول على عدد الطلبات المتبقية"""
-        one_hour_ago = timezone.now() - timedelta(hours=1)
-        usage_count = AIUsageLog.objects.filter(
-            user=user,
-            request_time__gte=one_hour_ago
-        ).count()
-        
-        limit = getattr(settings, 'AI_RATE_LIMIT_PER_HOUR', 10)
-        return max(0, limit - usage_count)
+        """Always returns unlimited"""
+        return 9999
 
 
 class SummarizeView(LoginRequiredMixin, AIRateLimitMixin, View):
@@ -69,11 +55,6 @@ class SummarizeView(LoginRequiredMixin, AIRateLimitMixin, View):
     
     def post(self, request, file_id):
         file_obj = get_object_or_404(LectureFile, pk=file_id, is_deleted=False)
-        
-        # التحقق من حد الاستخدام
-        if not self.check_rate_limit(request.user):
-            messages.error(request, 'لقد تجاوزت الحد المسموح من الطلبات. حاول بعد ساعة.')
-            return redirect('ai_features:summarize', file_id=file_id)
         
         # استخراج النص من الملف
         try:
@@ -140,10 +121,6 @@ class GenerateQuestionsView(LoginRequiredMixin, AIRateLimitMixin, View):
     
     def post(self, request, file_id):
         file_obj = get_object_or_404(LectureFile, pk=file_id, is_deleted=False)
-        
-        if not self.check_rate_limit(request.user):
-            messages.error(request, 'لقد تجاوزت الحد المسموح من الطلبات. حاول بعد ساعة.')
-            return redirect('ai_features:questions', file_id=file_id)
         
         question_type_req = request.POST.get('question_type', 'mixed')
         num_questions = int(request.POST.get('num_questions', 5))
@@ -226,15 +203,6 @@ class AskDocumentView(LoginRequiredMixin, AIRateLimitMixin, View):
     
     def post(self, request, file_id):
         file_obj = get_object_or_404(LectureFile, pk=file_id, is_deleted=False)
-        
-        if not self.check_rate_limit(request.user):
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'error': 'لقد تجاوزت الحد المسموح من الطلبات. حاول بعد ساعة.'
-                })
-            messages.error(request, 'لقد تجاوزت الحد المسموح من الطلبات. حاول بعد ساعة.')
-            return redirect('ai_features:ask_document', file_id=file_id)
         
         question = request.POST.get('question', '').strip()
         
