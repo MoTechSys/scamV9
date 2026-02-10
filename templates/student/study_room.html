@@ -7,9 +7,11 @@
     <title>{{ file.title }} - غرفة الدراسة</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Arabic', 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'; }
+        * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Arabic', 'Noto Sans', sans-serif; }
         body { background: #0f172a; color: #e2e8f0; margin: 0; height: 100vh; overflow: hidden; }
 
         .study-toolbar {
@@ -26,21 +28,30 @@
             flex: 7; background: #1e293b; display: flex; flex-direction: column;
             border-left: 1px solid #334155; overflow: hidden;
         }
-        .content-viewer iframe, .content-viewer video, .content-viewer .md-viewer {
+        .content-viewer iframe, .content-viewer video {
             flex: 1; width: 100%; border: none;
         }
         .content-viewer video { background: #000; }
-        .md-viewer { overflow-y: auto; padding: 24px; color: #e2e8f0; line-height: 1.8; }
+        .content-viewer .img-viewer {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            overflow: auto; padding: 16px; background: #0f172a;
+        }
+        .content-viewer .img-viewer img {
+            max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in;
+            border-radius: 8px; transition: transform 0.3s;
+        }
+        .content-viewer .img-viewer img.zoomed { transform: scale(2); cursor: zoom-out; }
+        .md-viewer { overflow-y: auto; padding: 24px; color: #e2e8f0; line-height: 1.8; flex: 1; }
         .md-viewer h1, .md-viewer h2, .md-viewer h3 { color: #818cf8; }
 
-        /* AI Panel */
+        /* AI Panel - Full Chat Experience */
         .ai-panel {
             flex: 3; background: #1e293b; display: flex; flex-direction: column;
             min-width: 300px; max-width: 450px;
         }
         .ai-panel-header {
             padding: 12px 16px; border-bottom: 1px solid #334155;
-            display: flex; gap: 8px; flex-wrap: wrap;
+            display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
         }
         .ai-panel-header .btn { font-size: 0.75rem; padding: 4px 10px; }
 
@@ -48,10 +59,21 @@
             flex: 1; overflow-y: auto; padding: 16px;
             display: flex; flex-direction: column; gap: 12px;
         }
-        .chat-msg { max-width: 95%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; }
+        .chat-msg { max-width: 95%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; word-wrap: break-word; }
         .chat-msg.user { background: #4f46e5; color: #fff; align-self: flex-end; border-bottom-left-radius: 4px; }
         .chat-msg.bot { background: #334155; color: #e2e8f0; align-self: flex-start; border-bottom-right-radius: 4px; }
         .chat-msg .chat-time { font-size: 0.65rem; opacity: 0.6; margin-top: 4px; }
+        /* Markdown inside bot messages */
+        .chat-msg.bot h1,.chat-msg.bot h2,.chat-msg.bot h3,.chat-msg.bot h4 { color: #818cf8; margin-top: 0.5em; font-size: 1.1em; }
+        .chat-msg.bot ul,.chat-msg.bot ol { padding-right: 1.2em; margin: 0.5em 0; }
+        .chat-msg.bot code { background: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+        .chat-msg.bot pre { background: #0f172a; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 0.5em 0; }
+        .chat-msg.bot pre code { background: none; padding: 0; }
+        .chat-msg.bot table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
+        .chat-msg.bot th, .chat-msg.bot td { border: 1px solid #475569; padding: 6px 10px; text-align: right; }
+        .chat-msg.bot th { background: #0f172a; }
+        .chat-msg.bot blockquote { border-right: 3px solid #818cf8; padding-right: 12px; margin: 0.5em 0; opacity: 0.9; }
+        .chat-msg.bot strong { color: #a5b4fc; }
 
         .chat-input-area {
             padding: 12px; border-top: 1px solid #334155;
@@ -62,16 +84,17 @@
             border-radius: 8px; padding: 8px 14px; font-size: 0.9rem;
         }
         .chat-input-area input:focus { outline: none; border-color: #6366f1; }
-        .chat-input-area button { background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; }
+        .chat-input-area button { background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
         .chat-input-area button:hover { background: #4f46e5; }
+        .chat-input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .remaining-badge { font-size: 0.7rem; color: #94a3b8; padding: 4px 8px; background: #0f172a; border-radius: 6px; }
+        .unlimited-badge { font-size: 0.7rem; color: #22c55e; padding: 4px 8px; background: rgba(34,197,94,0.1); border-radius: 6px; }
 
         /* Responsive */
         @media (max-width: 768px) {
             .study-container { flex-direction: column; }
-            .content-viewer { flex: 1; min-height: 50vh; }
-            .ai-panel { max-width: 100%; min-width: 100%; max-height: 50vh; }
+            .content-viewer { flex: 1; min-height: 45vh; }
+            .ai-panel { max-width: 100%; min-width: 100%; max-height: 55vh; }
         }
 
         /* Progress bar */
@@ -80,6 +103,12 @@
 
         #loading-spinner { display:none; text-align:center; padding:20px; }
         #loading-spinner.active { display:block; }
+
+        /* Image lightbox modal */
+        .lightbox-modal { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; }
+        .lightbox-modal.show { display:flex; }
+        .lightbox-modal img { max-width:95vw; max-height:95vh; object-fit:contain; }
+        .lightbox-close { position:absolute; top:16px; left:16px; color:#fff; font-size:2rem; cursor:pointer; z-index:10000; }
     </style>
 </head>
 <body>
@@ -93,12 +122,10 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <!-- Progress -->
             <div class="d-flex align-items-center gap-2">
                 <div class="progress-mini" style="width:80px;"><div class="bar" style="width:{{ progress.progress }}%"></div></div>
                 <small class="text-muted">{{ progress.progress }}%</small>
             </div>
-            <!-- Nav -->
             {% if prev_file %}<a href="{% url 'student:study_room' prev_file.pk %}" class="btn btn-sm btn-outline-light" title="السابق"><i class="bi bi-chevron-right"></i></a>{% endif %}
             {% if next_file %}<a href="{% url 'student:study_room' next_file.pk %}" class="btn btn-sm btn-outline-light" title="التالي"><i class="bi bi-chevron-left"></i></a>{% endif %}
             <a href="{% url 'courses:file_download' file.pk %}" class="btn btn-sm btn-outline-light" title="تحميل"><i class="bi bi-download"></i></a>
@@ -118,10 +145,46 @@
                 <iframe src="{% url 'streaming:stream_file' file.pk %}#toolbar=1&navpanes=0" style="height:100%;"></iframe>
             {% elif file.content_type == 'external_link' %}
                 {% if 'youtube.com' in file.external_link or 'youtu.be' in file.external_link %}
-                <iframe src="{{ file.external_link|cut:'watch?v='|cut:'https://www.youtube.com/'|cut:'https://youtu.be/' }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope" allowfullscreen style="height:100%;"></iframe>
+                <iframe id="youtubeEmbed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope" allowfullscreen style="height:100%;"></iframe>
+                <script>
+                    (function(){
+                        var url = "{{ file.external_link|escapejs }}";
+                        var videoId = '';
+                        var m = url.match(/[?&]v=([^&#]+)/) || url.match(/youtu\.be\/([^?&#]+)/) || url.match(/\/embed\/([^?&#]+)/);
+                        if(m) videoId = m[1];
+                        if(videoId) {
+                            document.getElementById('youtubeEmbed').src = 'https://www.youtube.com/embed/' + videoId;
+                        }
+                    })();
+                </script>
                 {% else %}
                 <iframe src="{{ file.external_link }}" style="height:100%;"></iframe>
                 {% endif %}
+            {% elif file.is_image %}
+                <div class="img-viewer">
+                    <img src="{% url 'streaming:stream_file' file.pk %}" alt="{{ file.title }}" onclick="toggleZoom(this)" ondblclick="openLightbox(this.src)">
+                </div>
+            {% elif file.file_extension in '.txt,.md,.csv,.rst' %}
+                <div class="md-viewer" id="textContent">
+                    <div class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-primary"></div> جاري تحميل المحتوى...
+                    </div>
+                </div>
+            {% elif file.file_extension in '.docx,.doc,.pptx,.ppt,.xlsx,.xls' %}
+                <div class="md-viewer">
+                    <div class="text-center py-5">
+                        <i class="bi bi-file-earmark-richtext fs-1 d-block mb-3" style="color:#818cf8;"></i>
+                        <h5>{{ file.title }}</h5>
+                        <p class="text-muted">نوع الملف: {{ file.file_extension|upper }}</p>
+                        <p class="text-muted small">هذا النوع من الملفات لا يمكن عرضه مباشرة في المتصفح</p>
+                        <a href="{% url 'courses:file_download' file.pk %}" class="btn btn-primary btn-lg mt-2">
+                            <i class="bi bi-download me-2"></i>تحميل الملف للعرض
+                        </a>
+                        <div class="mt-3">
+                            <small class="text-muted">يمكنك استخدام المساعد الذكي على اليسار لطرح أسئلة حول محتوى الملف</small>
+                        </div>
+                    </div>
+                </div>
             {% else %}
                 <div class="md-viewer">
                     <div class="text-center py-5">
@@ -134,43 +197,66 @@
             {% endif %}
         </div>
 
-        <!-- Right: AI Chat Panel -->
+        <!-- Right: AI Chat Panel (Full Conversation) -->
         <div class="ai-panel">
             <div class="ai-panel-header">
                 <button class="btn btn-outline-light btn-sm" onclick="sendQuickAction('summarize')"><i class="bi bi-text-paragraph me-1"></i>لخّص</button>
                 <button class="btn btn-outline-light btn-sm" onclick="sendQuickAction('quiz')"><i class="bi bi-question-circle me-1"></i>اختبرني</button>
                 <button class="btn btn-outline-light btn-sm" onclick="sendQuickAction('explain')"><i class="bi bi-lightbulb me-1"></i>اشرح</button>
-                <span class="remaining-badge ms-auto"><i class="bi bi-stars me-1"></i>{{ remaining_requests }} طلب متبقي</span>
+                <span class="unlimited-badge ms-auto"><i class="bi bi-infinity me-1"></i>غير محدود</span>
             </div>
 
             <div class="chat-area" id="chatArea">
                 {% if existing_summary %}
                 <div class="chat-msg bot">
                     <strong><i class="bi bi-robot me-1"></i>ملخص سابق:</strong><br>
-                    {{ existing_summary.summary_text|truncatechars:300 }}
+                    <div class="md-content">{{ existing_summary.summary_text|truncatechars:300 }}</div>
                 </div>
                 {% endif %}
                 {% for msg in chat_history %}
                 <div class="chat-msg user">{{ msg.question }}<div class="chat-time">{{ msg.created_at|date:"H:i" }}</div></div>
-                <div class="chat-msg bot">{{ msg.answer|linebreaksbr }}<div class="chat-time">{{ msg.created_at|date:"H:i" }}</div></div>
+                <div class="chat-msg bot"><div class="md-content">{{ msg.answer }}</div><div class="chat-time">{{ msg.created_at|date:"H:i" }}</div></div>
                 {% endfor %}
                 <div id="loading-spinner"><div class="spinner-border spinner-border-sm text-primary"></div> جاري التحليل...</div>
             </div>
 
             <div class="chat-input-area">
                 <input type="text" id="chatInput" placeholder="اسأل عن المحتوى..." onkeypress="if(event.key==='Enter')sendMessage()">
-                <button onclick="sendMessage()"><i class="bi bi-send"></i></button>
+                <button id="sendBtn" onclick="sendMessage()"><i class="bi bi-send"></i></button>
             </div>
         </div>
+    </div>
+
+    <!-- Image Lightbox -->
+    <div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox()">
+        <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+        <img id="lightboxImg" src="" alt="عرض مكبر">
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const chatArea = document.getElementById('chatArea');
         const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
         const loadingSpinner = document.getElementById('loading-spinner');
         const csrfToken = '{{ csrf_token }}';
         const chatUrl = '{% url "student:ai_chat" file.pk %}';
+
+        // Configure marked for Markdown rendering
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                sanitize: false
+            });
+        }
+
+        // Render all existing markdown messages on load
+        document.querySelectorAll('.chat-msg.bot .md-content').forEach(el => {
+            if (typeof marked !== 'undefined') {
+                el.innerHTML = marked.parse(el.textContent || el.innerText);
+            }
+        });
 
         function scrollToBottom() {
             chatArea.scrollTop = chatArea.scrollHeight;
@@ -180,7 +266,18 @@
         function addMessage(text, type) {
             const div = document.createElement('div');
             div.className = `chat-msg ${type}`;
-            div.innerHTML = text.replace(/\n/g, '<br>');
+            if (type === 'bot') {
+                const mdDiv = document.createElement('div');
+                mdDiv.className = 'md-content';
+                if (typeof marked !== 'undefined') {
+                    mdDiv.innerHTML = marked.parse(text);
+                } else {
+                    mdDiv.innerHTML = text.replace(/\n/g, '<br>');
+                }
+                div.appendChild(mdDiv);
+            } else {
+                div.textContent = text;
+            }
             chatArea.insertBefore(div, loadingSpinner);
             scrollToBottom();
         }
@@ -201,6 +298,8 @@
 
         function doSend(question, action) {
             loadingSpinner.classList.add('active');
+            sendBtn.disabled = true;
+            chatInput.disabled = true;
             scrollToBottom();
 
             const formData = new FormData();
@@ -215,20 +314,35 @@
             .then(r => r.json())
             .then(data => {
                 loadingSpinner.classList.remove('active');
+                sendBtn.disabled = false;
+                chatInput.disabled = false;
+                chatInput.focus();
                 if (data.success) {
                     addMessage(data.answer, 'bot');
-                    if (data.remaining !== undefined) {
-                        document.querySelector('.remaining-badge').innerHTML = `<i class="bi bi-stars me-1"></i>${data.remaining} طلب متبقي`;
-                    }
                 } else {
                     addMessage('⚠️ ' + (data.error || 'حدث خطأ'), 'bot');
                 }
             })
             .catch(() => {
                 loadingSpinner.classList.remove('active');
-                addMessage('⚠️ خطأ في الاتصال', 'bot');
+                sendBtn.disabled = false;
+                chatInput.disabled = false;
+                addMessage('⚠️ خطأ في الاتصال. يرجى المحاولة مرة أخرى.', 'bot');
             });
         }
+
+        // Image viewer functions
+        function toggleZoom(img) {
+            img.classList.toggle('zoomed');
+        }
+        function openLightbox(src) {
+            document.getElementById('lightboxImg').src = src;
+            document.getElementById('lightboxModal').classList.add('show');
+        }
+        function closeLightbox() {
+            document.getElementById('lightboxModal').classList.remove('show');
+        }
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
     </script>
 </body>
 </html>

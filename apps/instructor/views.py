@@ -418,21 +418,30 @@ class AIGenerateView(LoginRequiredMixin, InstructorRequiredMixin, View):
     """معالجة طلب توليد AI من المدرس"""
 
     def post(self, request):
-        file_id = request.POST.get('file_id')
-        if not file_id:
-            messages.error(request, 'يرجى اختيار ملف.')
+        file_ids = request.POST.getlist('file_ids')
+        if not file_ids:
+            # Backward compatible: try single file_id
+            single_id = request.POST.get('file_id')
+            if single_id:
+                file_ids = [single_id]
+            else:
+                messages.error(request, 'يرجى اختيار ملف واحد على الأقل.')
+                return redirect('instructor:ai_hub')
+
+        files = LectureFile.objects.filter(pk__in=file_ids, is_deleted=False)
+        if not files.exists():
+            messages.error(request, 'الملفات المحددة غير متاحة.')
             return redirect('instructor:ai_hub')
 
-        file_obj = get_object_or_404(
-            LectureFile, pk=file_id, is_deleted=False
-        )
+        # التحقق أن المدرس يملك الوصول لهذه الملفات
+        for file_obj in files:
+            if not InstructorCourse.objects.filter(
+                instructor=request.user, course=file_obj.course
+            ).exists():
+                messages.error(request, f'ليس لديك صلاحية للملف: {file_obj.title}')
+                return redirect('instructor:ai_hub')
 
-        # التحقق أن المدرس يملك الوصول لهذا الملف
-        if not InstructorCourse.objects.filter(
-            instructor=request.user, course=file_obj.course
-        ).exists():
-            messages.error(request, 'ليس لديك صلاحية لهذا الملف.')
-            return redirect('instructor:ai_hub')
+        first_file = files.first()
 
         # قراءة التكوين
         mcq_count = int(request.POST.get('mcq_count', 0))
@@ -448,43 +457,66 @@ class AIGenerateView(LoginRequiredMixin, InstructorRequiredMixin, View):
             from apps.ai_features.services import GeminiService, QuestionMatrixConfig
             service = GeminiService()
 
+            # Aggregate text from all selected files
+            aggregated_text = ""
+            file_titles = []
+            for f in files:
+                text = service.extract_text_from_file(f)
+                if text:
+                    aggregated_text += f"\n\n[FILE: {f.title}]\n\n{text}"
+                    file_titles.append(f.title)
+
+            if not aggregated_text.strip():
+                messages.error(request, 'لم نتمكن من استخراج النص من الملفات المحددة.')
+                return redirect('instructor:ai_hub')
+
             results = []
 
             # توليد الملخص
             if generate_summary:
                 job = AIGenerationJob.objects.create(
-                    instructor=request.user, file=file_obj,
+                    instructor=request.user, file=first_file,
                     job_type='summary', user_notes=user_notes,
                     status='processing'
                 )
                 start = time.time()
-                result = service.generate_and_save_summary(file_obj, user_notes=user_notes)
+                result_text = service.generate_summary(aggregated_text, user_notes=user_notes)
                 elapsed = time.time() - start
 
-                if result.success:
+                if result_text:
+                    md_path = service.storage.save_summary(
+                        file_id=first_file.id,
+                        content=result_text,
+                        metadata={
+                            'source_files': ', '.join(file_titles),
+                            'course': str(first_file.course),
+                            'date': timezone.now().strftime('%Y-%m-%d %H:%M'),
+                            'model': service._model_name,
+                        }
+                    )
                     job.status = 'completed'
-                    job.md_file_path = result.md_file_path
+                    job.md_file_path = md_path
                     job.completed_at = timezone.now()
                     job.save()
 
                     AISummary.objects.update_or_create(
-                        file=file_obj,
+                        file=first_file,
                         defaults={
                             'user': request.user,
-                            'summary_text': (result.data[:200] + '...') if result.data and len(result.data) > 200 else (result.data or ''),
-                            'md_file_path': result.md_file_path,
-                            'word_count': len(result.data.split()) if result.data else 0,
+                            'summary_text': (result_text[:200] + '...') if len(result_text) > 200 else result_text,
+                            'md_file_path': md_path,
+                            'word_count': len(result_text.split()),
                             'generation_time': elapsed,
-                            'model_used': 'gemini-2.0-flash',
+                            'model_used': service._model_name,
                             'is_cached': True,
                         }
                     )
                     results.append('تم توليد الملخص بنجاح')
                 else:
                     job.status = 'failed'
-                    job.error_message = result.error
+                    job.error_message = 'لم يتمكن AI من توليد ملخص'
                     job.save()
-                    results.append(f'فشل التلخيص: {result.error}')
+                    results.append('فشل التلخيص')
 
             # توليد الأسئلة
             total_q = mcq_count + tf_count + sa_count
@@ -495,42 +527,51 @@ class AIGenerateView(LoginRequiredMixin, InstructorRequiredMixin, View):
                     short_answer_count=sa_count, short_answer_score=sa_score,
                 )
                 job = AIGenerationJob.objects.create(
-                    instructor=request.user, file=file_obj,
+                    instructor=request.user, file=first_file,
                     job_type='questions', user_notes=user_notes,
                     config=matrix.to_dict(), status='processing'
                 )
-                result = service.generate_and_save_questions(file_obj, matrix, user_notes)
+                questions = service.generate_questions_matrix(aggregated_text, matrix, user_notes)
 
-                if result.success:
+                if questions:
+                    md_path = service.storage.save_questions(
+                        file_id=first_file.id,
+                        questions_data=questions,
+                        metadata={
+                            'source_files': ', '.join(file_titles),
+                            'date': timezone.now().strftime('%Y-%m-%d %H:%M'),
+                            'total_questions': str(len(questions)),
+                            'total_score': str(matrix.total_score),
+                            'model': service._model_name,
+                        }
+                    )
                     job.status = 'completed'
-                    job.md_file_path = result.md_file_path
+                    job.md_file_path = md_path
                     job.completed_at = timezone.now()
                     job.save()
 
-                    # حفظ الأسئلة في DB أيضاً
-                    if isinstance(result.data, list):
-                        for q in result.data:
-                            AIGeneratedQuestion.objects.create(
-                                file=file_obj,
-                                user=request.user,
-                                question_text=q.get('question', ''),
-                                question_type=q.get('type', 'short_answer'),
-                                options=q.get('options'),
-                                correct_answer=q.get('answer', ''),
-                                explanation=q.get('explanation', ''),
-                                score=q.get('score', 1.0),
-                            )
+                    for q in questions:
+                        AIGeneratedQuestion.objects.create(
+                            file=first_file,
+                            user=request.user,
+                            question_text=q.get('question', ''),
+                            question_type=q.get('type', 'short_answer'),
+                            options=q.get('options'),
+                            correct_answer=q.get('answer', ''),
+                            explanation=q.get('explanation', ''),
+                            score=q.get('score', 1.0),
+                        )
 
                     AIUsageLog.log_request(
                         user=request.user, request_type='questions',
-                        file=file_obj, success=True
+                        file=first_file, success=True
                     )
-                    results.append(f'تم توليد {total_q} سؤال بنجاح')
+                    results.append(f'تم توليد {len(questions)} سؤال بنجاح')
                 else:
                     job.status = 'failed'
-                    job.error_message = result.error
+                    job.error_message = 'لم يتمكن AI من توليد أسئلة'
                     job.save()
-                    results.append(f'فشل توليد الأسئلة: {result.error}')
+                    results.append('فشل توليد الأسئلة')
 
             if results:
                 messages.success(request, ' | '.join(results))
@@ -538,8 +579,8 @@ class AIGenerateView(LoginRequiredMixin, InstructorRequiredMixin, View):
                 messages.warning(request, 'لم يتم طلب أي عملية توليد.')
 
         except Exception as e:
-            logger.error(f"AI Generation error: {e}")
-            messages.error(request, f'حدث خطأ: {str(e)}')
+            logger.error(f"AI Generation error: {e}", exc_info=True)
+            messages.error(request, f'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.')
 
         return redirect(reverse('instructor:ai_hub') + '?tab=archives')
 
@@ -939,14 +980,36 @@ class InstructorSettingsView(LoginRequiredMixin, InstructorRequiredMixin, View):
 # ========== AJAX Endpoint for File List by Course ==========
 
 class CourseFilesAjaxView(LoginRequiredMixin, InstructorRequiredMixin, View):
-    """إرجاع قائمة ملفات المقرر (AJAX)"""
+    """إرجاع قائمة ملفات المقرر (AJAX) - مع دعم HTMX لاختيار متعدد"""
     def get(self, request):
         course_id = request.GET.get('course_id')
         if not course_id:
+            if request.headers.get('HX-Request'):
+                return HttpResponse('<div class="text-center text-muted py-3">اختر المقرر أولاً</div>')
             return JsonResponse({'files': []})
 
         files = LectureFile.objects.filter(
             course_id=course_id, is_deleted=False
         ).values('id', 'title', 'file_type', 'file_extension')
+
+        if request.headers.get('HX-Request'):
+            files_list = list(files)
+            html = ''
+            for f in files_list:
+                icon = 'bi-file-earmark-pdf' if f.get('file_extension', '') == '.pdf' else 'bi-file-earmark'
+                html += f'''
+                <div class="form-check d-flex align-items-center gap-2 py-2 px-3"
+                     style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                    <input class="form-check-input file-checkbox" type="checkbox" name="file_ids"
+                           value="{f['id']}" id="file_{f['id']}">
+                    <label class="form-check-label d-flex align-items-center gap-2 w-100" for="file_{f['id']}">
+                        <i class="bi {icon}" style="color:var(--primary);"></i>
+                        <span>{f['title']}</span>
+                        <span class="badge bg-light text-muted ms-auto" style="font-size:0.7rem;">{f['file_type']}</span>
+                    </label>
+                </div>'''
+            if not html:
+                html = '<div class="text-center text-muted py-3"><i class="bi bi-inbox me-1"></i>لا توجد ملفات متاحة</div>'
+            return HttpResponse(html)
 
         return JsonResponse({'files': list(files)})
