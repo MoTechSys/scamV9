@@ -3,403 +3,217 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-
     <meta name="description" content="S-ACM - نظام إدارة المحتوى الأكاديمي الذكي">
     <title>{% block title %}S-ACM{% endblock %}</title>
+
+    <!-- Viewport with safe area -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+
+    <!-- PWA Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#6366f1">
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Tajawal Font (CDN fallback for local @font-face) -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
     <!-- Bootstrap 5 RTL -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Mobile App CSS -->
+
+    <!-- S-ACM Design System -->
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <!-- S-ACM Mobile App Experience -->
     <link href="{% static 'css/mobile-app.css' %}" rel="stylesheet">
-    <!-- iOS PWA Meta -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#ffffff">
-    <!-- Viewport with safe area -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
-    <style>
-        :root {
-            --primary: #6366f1;
-            --primary-light: #818cf8;
-            --primary-dark: #4f46e5;
-            --secondary: #0ea5e9;
-            --success: #22c55e;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --sidebar-width: 260px;
-            --sidebar-collapsed: 72px;
-            --navbar-height: 60px;
-            --bg-body: #f1f5f9;
-            --bg-card: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-            --shadow-lg: 0 8px 25px rgba(0,0,0,0.1);
-            --radius: 12px;
-            --radius-sm: 8px;
-        }
-        * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Arabic', 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'; }
-        body { background: var(--bg-body); color: var(--text-primary); min-height: 100vh; }
-
-        /* ===== SIDEBAR ===== */
-        .sidebar {
-            position: fixed; top: 0; right: 0; bottom: 0;
-            width: var(--sidebar-width); background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
-            z-index: 1040; transition: width 0.3s ease; overflow-y: auto; overflow-x: hidden;
-            box-shadow: -4px 0 15px rgba(0,0,0,0.1);
-            display: flex; flex-direction: column;
-        }
-        .sidebar.collapsed {
-            width: var(--sidebar-collapsed);
-        }
-        .sidebar-brand {
-            padding: 16px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);
-            min-height: 68px; display: flex; align-items: center; justify-content: center;
-            flex-direction: column; flex-shrink: 0;
-        }
-        .sidebar-brand h4 { color: #fff; font-weight: 800; margin: 0; white-space: nowrap; transition: all 0.3s; }
-        .sidebar-brand small { color: rgba(255,255,255,0.6); font-size: 0.75rem; white-space: nowrap; transition: all 0.3s; }
-        .sidebar.collapsed .sidebar-brand h4 { font-size: 1rem; }
-        .sidebar.collapsed .sidebar-brand small,
-        .sidebar.collapsed .sidebar-brand .brand-text { display: none; }
-        .sidebar.collapsed .sidebar-brand .brand-icon { font-size: 1.3rem; }
-
-        .sidebar-nav { padding: 8px 0; flex: 1; overflow-y: auto; }
-        .sidebar-nav .nav-item { margin: 2px 8px; }
-        .sidebar-nav .nav-link {
-            color: rgba(255,255,255,0.75); padding: 10px 14px; border-radius: var(--radius-sm);
-            display: flex; align-items: center; gap: 10px; transition: all 0.2s; font-size: 0.9rem;
-            white-space: nowrap; overflow: hidden; position: relative;
-        }
-        .sidebar-nav .nav-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
-        .sidebar-nav .nav-link.active {
-            background: rgba(99,102,241,0.3); color: #fff; font-weight: 600;
-            box-shadow: inset 3px 0 0 var(--primary-light);
-        }
-        .sidebar-nav .nav-link i { font-size: 1.15rem; width: 22px; text-align: center; flex-shrink: 0; }
-        .sidebar-nav .nav-link .link-text { transition: opacity 0.2s, width 0.3s; }
-        .sidebar.collapsed .nav-link .link-text,
-        .sidebar.collapsed .sidebar-badge { display: none; }
-        .sidebar.collapsed .nav-link {
-            justify-content: center; padding: 10px 0;
-        }
-        .sidebar-section-title {
-            color: rgba(255,255,255,0.4); font-size: 0.7rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px 4px;
-            white-space: nowrap; transition: all 0.2s;
-        }
-        .sidebar.collapsed .sidebar-section-title { text-align: center; font-size: 0; padding: 8px; }
-        .sidebar.collapsed .sidebar-section-title::after {
-            content: ''; display: block; width: 20px; height: 1px;
-            background: rgba(255,255,255,0.2); margin: 0 auto;
-        }
-        .sidebar-badge {
-            background: var(--danger); color: #fff; font-size: 0.65rem;
-            padding: 2px 7px; border-radius: 10px; margin-right: auto;
-        }
-
-        /* Collapse Toggle Button */
-        .sidebar-toggle-btn {
-            position: absolute; top: 50%; left: -14px; transform: translateY(-50%);
-            width: 28px; height: 28px; border-radius: 50%;
-            background: var(--primary); color: #fff; border: 2px solid var(--bg-body);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; z-index: 1041; transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        .sidebar-toggle-btn:hover {
-            background: var(--primary-dark); transform: translateY(-50%) scale(1.1);
-        }
-        .sidebar-toggle-btn i { font-size: 0.8rem; transition: transform 0.3s; }
-        .sidebar.collapsed .sidebar-toggle-btn i { transform: rotate(180deg); }
-
-        /* Sidebar Footer */
-        .sidebar-footer {
-            padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1);
-            flex-shrink: 0;
-        }
-        .sidebar-footer .user-info { transition: all 0.3s; }
-        .sidebar.collapsed .sidebar-footer .user-info { display: none; }
-        .sidebar.collapsed .sidebar-footer { text-align: center; padding: 12px 8px; }
-
-        /* Tooltip for collapsed sidebar */
-        .sidebar.collapsed .nav-link[title] { position: relative; }
-        .sidebar.collapsed .nav-link:hover::after {
-            content: attr(title); position: absolute; right: calc(100% + 8px); top: 50%;
-            transform: translateY(-50%); background: #1e293b; color: #fff;
-            padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;
-            white-space: nowrap; z-index: 9999; pointer-events: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-
-        /* ===== MAIN CONTENT ===== */
-        .main-wrapper {
-            margin-right: var(--sidebar-width); min-height: 100vh;
-            display: flex; flex-direction: column; transition: margin-right 0.3s ease;
-        }
-        body.sidebar-collapsed .main-wrapper {
-            margin-right: var(--sidebar-collapsed);
-        }
-
-        /* ===== TOP NAVBAR ===== */
-        .top-navbar {
-            height: var(--navbar-height); background: var(--bg-card);
-            border-bottom: 1px solid var(--border-color); padding: 0 24px;
-            display: flex; align-items: center; justify-content: space-between;
-            position: sticky; top: 0; z-index: 1020; box-shadow: var(--shadow-sm);
-        }
-        .top-navbar .page-title { font-weight: 700; font-size: 1.1rem; margin: 0; }
-        .top-navbar .nav-actions { display: flex; align-items: center; gap: 12px; }
-        .top-navbar .nav-actions .btn-icon {
-            width: 38px; height: 38px; border-radius: 50%; display: flex;
-            align-items: center; justify-content: center; border: 1px solid var(--border-color);
-            background: var(--bg-card); color: var(--text-secondary); transition: all 0.2s;
-            cursor: pointer;
-        }
-        .top-navbar .nav-actions .btn-icon:hover {
-            background: var(--primary); color: #fff; border-color: var(--primary);
-        }
-
-        /* ===== AVATAR ===== */
-        .avatar-circle {
-            width: 36px; height: 36px; border-radius: 50%; display: flex;
-            align-items: center; justify-content: center; font-weight: 700;
-            font-size: 0.85rem; background: var(--primary); color: #fff;
-        }
-
-        /* ===== CARDS ===== */
-        .card {
-            border: none; border-radius: var(--radius); box-shadow: var(--shadow-sm);
-            transition: all 0.2s; background: var(--bg-card);
-        }
-        .card:hover { box-shadow: var(--shadow-md); }
-        .stat-card {
-            border-radius: var(--radius); padding: 20px; color: #fff;
-            position: relative; overflow: hidden;
-        }
-        .stat-card::before {
-            content: ''; position: absolute; top: -20px; left: -20px;
-            width: 80px; height: 80px; border-radius: 50%;
-            background: rgba(255,255,255,0.15);
-        }
-        .stat-card .stat-icon { font-size: 2rem; opacity: 0.8; }
-        .stat-card .stat-value { font-size: 1.8rem; font-weight: 800; }
-        .stat-card .stat-label { font-size: 0.8rem; opacity: 0.9; }
-        .bg-gradient-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
-        .bg-gradient-success { background: linear-gradient(135deg, #22c55e, #16a34a); }
-        .bg-gradient-info { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
-        .bg-gradient-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
-        .bg-gradient-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
-
-        /* ===== CONTENT ===== */
-        .page-content { flex: 1; padding: 24px; }
-
-        /* ===== BREADCRUMB ===== */
-        .breadcrumb-custom { background: transparent; padding: 0; margin-bottom: 20px; }
-        .breadcrumb-custom .breadcrumb-item a { color: var(--primary); text-decoration: none; }
-        .breadcrumb-custom .breadcrumb-item.active { color: var(--text-secondary); }
-
-        /* ===== TOAST ===== */
-        .toast-container { position: fixed; top: 20px; left: 20px; z-index: 9999; }
-
-        /* ===== PROGRESS BAR ===== */
-        .progress { height: 8px; border-radius: 4px; background: #e2e8f0; }
-        .progress-bar { border-radius: 4px; transition: width 0.6s ease; }
-
-        /* ===== FOOTER ===== */
-        .dashboard-footer {
-            background: var(--bg-card); border-top: 1px solid var(--border-color);
-            padding: 16px 24px; text-align: center;
-        }
-        .dashboard-footer small { color: var(--text-secondary); }
-
-        /* ===== MOBILE ===== */
-        @media (max-width: 991.98px) {
-            .sidebar { transform: translateX(100%); width: var(--sidebar-width) !important; }
-            .sidebar.show { transform: translateX(0); }
-            .sidebar.collapsed { width: var(--sidebar-width) !important; }
-            .main-wrapper { margin-right: 0 !important; }
-            .mobile-toggle { display: flex !important; }
-            .sidebar-toggle-btn { display: none !important; }
-        }
-        @media (min-width: 992px) {
-            .mobile-toggle { display: none !important; }
-            .sidebar-overlay { display: none !important; }
-        }
-        .sidebar-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-            z-index: 1035; display: none;
-        }
-        .sidebar-overlay.show { display: block; }
-
-        /* ===== TABLE ===== */
-        .table th { font-weight: 600; color: var(--text-secondary); font-size: 0.85rem; border-top: none; }
-        .table td { vertical-align: middle; }
-
-        /* ===== FORM ===== */
-        .form-control, .form-select {
-            border-radius: var(--radius-sm); border-color: var(--border-color);
-            padding: 10px 14px;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
-        }
-        .btn { border-radius: var(--radius-sm); font-weight: 600; padding: 8px 20px; }
-        .btn-primary { background: var(--primary); border-color: var(--primary); }
-        .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
-
-        /* ===== EMPTY STATE ===== */
-        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
-        .empty-state i { font-size: 4rem; opacity: 0.3; margin-bottom: 16px; }
-
-        {% block extra_styles %}{% endblock %}
-    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Sidebar Overlay (Mobile) -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+    <!-- ==========================================
+         SIDEBAR OVERLAY (Mobile)
+         ========================================== -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
-        <!-- Collapse Toggle -->
-        <div class="sidebar-toggle-btn" id="sidebarCollapseBtn" onclick="toggleSidebarCollapse()" title="طي/توسيع القائمة">
+    <!-- ==========================================
+         DESKTOP SIDEBAR (Glassmorphism + Collapsible)
+         ========================================== -->
+    <nav class="sidebar" id="sidebar" role="navigation" aria-label="القائمة الرئيسية">
+        <!-- Collapse Toggle Button -->
+        <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="طي/توسيع القائمة" aria-label="طي القائمة" type="button">
             <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <!-- Brand -->
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon">
+                <i class="bi bi-mortarboard-fill"></i>
+            </div>
+            <div class="sidebar-brand-text">
+                <h4>S-ACM</h4>
+                <small>{% if is_instructor %}مركز القيادة{% elif is_student %}بوابة التعلم{% else %}لوحة التحكم{% endif %}</small>
+            </div>
         </div>
 
-        <div class="sidebar-brand">
-            <h4><i class="bi bi-mortarboard-fill brand-icon me-2"></i><span class="brand-text">S-ACM</span></h4>
-            <small>{% if is_instructor %}مركز القيادة{% elif is_student %}بوابة التعلم{% else %}لوحة التحكم{% endif %}</small>
-        </div>
-        <div class="sidebar-nav">
+        <!-- Navigation -->
+        <div class="sidebar-nav" id="sidebarNav">
             {% block sidebar_nav %}
             {% if is_instructor %}
+            <!-- Instructor Navigation -->
             <div class="sidebar-section-title">الرئيسية</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{% url 'instructor:dashboard' %}" title="لوحة التحكم">
-                    <i class="bi bi-speedometer2"></i> <span class="link-text">لوحة التحكم</span>
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="link-text">لوحة التحكم</span>
                 </a>
             </div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'courses' %}active{% endif %}" href="{% url 'instructor:course_list' %}" title="مقرراتي">
-                    <i class="bi bi-book"></i> <span class="link-text">مقرراتي</span>
+                    <i class="bi bi-book"></i>
+                    <span class="link-text">مقرراتي</span>
                 </a>
             </div>
+
             <div class="sidebar-section-title">الأدوات</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'ai_hub' %}active{% endif %}" href="{% url 'instructor:ai_hub' %}" title="مركز AI">
-                    <i class="bi bi-robot"></i> <span class="link-text">مركز AI</span>
+                    <i class="bi bi-robot"></i>
+                    <span class="link-text">مركز AI</span>
                 </a>
             </div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'reports' %}active{% endif %}" href="{% url 'instructor:reports' %}" title="التقارير">
-                    <i class="bi bi-bar-chart-line"></i> <span class="link-text">التقارير</span>
+                    <i class="bi bi-bar-chart-line"></i>
+                    <span class="link-text">التقارير</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link {% if active_page == 'upload' %}active{% endif %}" href="{% url 'instructor:file_upload' %}" title="رفع ملف">
+                    <i class="bi bi-cloud-upload"></i>
+                    <span class="link-text">رفع ملف</span>
                 </a>
             </div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'trash' %}active{% endif %}" href="{% url 'instructor:trash_list' %}" title="سلة المهملات">
-                    <i class="bi bi-trash3"></i> <span class="link-text">سلة المهملات</span>
+                    <i class="bi bi-trash3"></i>
+                    <span class="link-text text-truncate">سلة المهملات</span>
                     {% if trash_count %}<span class="sidebar-badge">{{ trash_count }}</span>{% endif %}
                 </a>
             </div>
+
             <div class="sidebar-section-title">التواصل</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'notifications' %}active{% endif %}" href="{% url 'notifications:management' %}" title="إدارة الإشعارات">
-                    <i class="bi bi-bell"></i> <span class="link-text">إدارة الإشعارات</span>
+                    <i class="bi bi-bell"></i>
+                    <span class="link-text text-truncate">إدارة الإشعارات</span>
                     {% if unread_count %}<span class="sidebar-badge">{{ unread_count }}</span>{% endif %}
                 </a>
             </div>
+
             <div class="sidebar-section-title">النظام</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'settings' %}active{% endif %}" href="{% url 'instructor:settings' %}" title="الإعدادات">
-                    <i class="bi bi-gear"></i> <span class="link-text">الإعدادات</span>
+                    <i class="bi bi-gear"></i>
+                    <span class="link-text">الإعدادات</span>
                 </a>
             </div>
 
             {% elif is_student %}
+            <!-- Student Navigation -->
             <div class="sidebar-section-title">الرئيسية</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{% url 'student:dashboard' %}" title="لوحة التحكم">
-                    <i class="bi bi-speedometer2"></i> <span class="link-text">لوحة التحكم</span>
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="link-text">لوحة التحكم</span>
                 </a>
             </div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'courses' %}active{% endif %}" href="{% url 'student:course_list' %}" title="مقرراتي">
-                    <i class="bi bi-book"></i> <span class="link-text">مقرراتي</span>
+                    <i class="bi bi-book"></i>
+                    <span class="link-text">مقرراتي</span>
                 </a>
             </div>
+
             <div class="sidebar-section-title">الذكاء الاصطناعي</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'ai_center' %}active{% endif %}" href="{% url 'student:ai_center' %}" title="مركز AI">
-                    <i class="bi bi-stars"></i> <span class="link-text">مركز AI</span>
+                    <i class="bi bi-stars"></i>
+                    <span class="link-text">مركز AI</span>
                 </a>
             </div>
             <div class="nav-item">
                 <a class="nav-link" href="{% url 'ai_features:usage_stats' %}" title="إحصائيات AI">
-                    <i class="bi bi-bar-chart"></i> <span class="link-text">إحصائيات AI</span>
+                    <i class="bi bi-bar-chart"></i>
+                    <span class="link-text">إحصائيات AI</span>
                 </a>
             </div>
+
             <div class="sidebar-section-title">التواصل</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'notifications' %}active{% endif %}" href="{% url 'notifications:management' %}" title="إدارة الإشعارات">
-                    <i class="bi bi-bell"></i> <span class="link-text">إدارة الإشعارات</span>
+                    <i class="bi bi-bell"></i>
+                    <span class="link-text text-truncate">إدارة الإشعارات</span>
                     {% if unread_count %}<span class="sidebar-badge">{{ unread_count }}</span>{% endif %}
                 </a>
             </div>
+
             <div class="sidebar-section-title">النظام</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'settings' %}active{% endif %}" href="{% url 'student:settings' %}" title="الإعدادات">
-                    <i class="bi bi-gear"></i> <span class="link-text">الإعدادات</span>
+                    <i class="bi bi-gear"></i>
+                    <span class="link-text">الإعدادات</span>
                 </a>
             </div>
             {% endif %}
             {% endblock %}
         </div>
-        <!-- Sidebar Footer -->
+
+        <!-- Sidebar Footer - User Info -->
         <div class="sidebar-footer">
-            <div class="d-flex align-items-center gap-3">
-                <div class="avatar-circle" style="width:38px;height:38px;font-size:0.9rem;flex-shrink:0;">
+            <div class="sidebar-user">
+                <div class="avatar-circle">
                     {{ request.user.full_name|slice:":1"|upper }}
                 </div>
-                <div class="user-info">
-                    <div style="color:#fff;font-size:0.85rem;font-weight:600;">{{ request.user.full_name|truncatechars:16 }}</div>
-                    <div style="color:rgba(255,255,255,0.5);font-size:0.7rem;">{{ user_role|default:"مستخدم" }}</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name text-truncate">{{ request.user.full_name|truncatechars:16 }}</div>
+                    <div class="sidebar-user-role">{{ user_role|default:"مستخدم" }}</div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content Wrapper -->
-    <div class="main-wrapper">
+    <!-- ==========================================
+         MAIN CONTENT WRAPPER
+         ========================================== -->
+    <div class="main-wrapper" id="mainWrapper">
         <!-- Top Navbar -->
-        <header class="top-navbar">
-            <div class="d-flex align-items-center gap-3">
-                <button class="btn-icon mobile-toggle" onclick="toggleMobileSidebar()" type="button">
-                    <i class="bi bi-list fs-5"></i>
+        <header class="top-navbar" id="topNavbar">
+            <div class="d-flex align-items-center gap-3 min-w-0">
+                <!-- Mobile Menu Toggle (hamburger) -->
+                <button class="btn-icon mobile-toggle" id="mobileMenuToggle" type="button" aria-label="فتح القائمة">
+                    <i class="bi bi-list"></i>
                 </button>
-                <h6 class="page-title mb-0">{% block page_title %}لوحة التحكم{% endblock %}</h6>
+                <h6 class="page-title mb-0 text-truncate">{% block page_title %}لوحة التحكم{% endblock %}</h6>
             </div>
             <div class="nav-actions">
-                <!-- Notifications -->
+                <!-- Notifications Dropdown -->
                 <div class="dropdown">
-                    <button class="btn-icon position-relative" data-bs-toggle="dropdown">
+                    <button class="btn-icon position-relative" data-bs-toggle="dropdown" aria-label="الإشعارات">
                         <i class="bi bi-bell"></i>
                         {% if unread_count and unread_count > 0 %}
-                        <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;">
-                            {{ unread_count }}
-                        </span>
+                        <span class="notification-dot">{{ unread_count }}</span>
                         {% endif %}
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:320px;">
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width:300px;max-width:340px;">
                         <li>
                             <div class="dropdown-header d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">الإشعارات</h6>
+                                <h6 class="mb-0 fw-bold">الإشعارات</h6>
                                 {% if unread_count > 0 %}
                                 <span class="badge bg-primary rounded-pill">{{ unread_count }} جديد</span>
                                 {% endif %}
@@ -411,9 +225,9 @@
                             <li>
                                 <a class="dropdown-item py-2" href="{% url 'notifications:detail' nr.notification.pk %}">
                                     <div class="d-flex gap-2 align-items-start">
-                                        <i class="bi bi-circle-fill text-primary" style="font-size:0.5rem;margin-top:6px;"></i>
-                                        <div>
-                                            <div class="fw-bold small">{{ nr.notification.title|truncatechars:40 }}</div>
+                                        <i class="bi bi-circle-fill text-primary flex-shrink-0" style="font-size:0.4rem;margin-top:7px;"></i>
+                                        <div class="min-w-0">
+                                            <div class="fw-semibold small text-truncate">{{ nr.notification.title|truncatechars:38 }}</div>
                                             <div class="text-muted" style="font-size:0.7rem;">{{ nr.notification.created_at|timesince }} مضت</div>
                                         </div>
                                     </div>
@@ -426,29 +240,30 @@
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <div class="d-flex justify-content-between px-3 py-1">
-                                <a class="dropdown-item text-center small p-0" href="{% url 'notifications:management' %}">عرض الكل</a>
+                                <a class="dropdown-item text-center small p-0 text-primary" href="{% url 'notifications:management' %}">عرض الكل</a>
                                 {% if unread_count > 0 %}
                                 <form method="post" action="{% url 'notifications:mark_all_read' %}" class="d-inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-link text-muted small p-0" style="font-size:0.75rem;">تحديد الكل كمقروء</button>
+                                    <button type="submit" class="btn btn-link text-muted small p-0" style="font-size:0.72rem;">تحديد الكل كمقروء</button>
                                 </form>
                                 {% endif %}
                             </div>
                         </li>
                     </ul>
                 </div>
+
                 <!-- User Menu -->
                 <div class="dropdown">
-                    <button class="d-flex align-items-center gap-2 btn btn-link text-dark text-decoration-none" data-bs-toggle="dropdown">
-                        <div class="avatar-circle">{{ request.user.full_name|slice:":1"|upper }}</div>
-                        <span class="d-none d-md-inline small">{{ request.user.full_name|truncatechars:12 }}</span>
-                        <i class="bi bi-chevron-down small"></i>
+                    <button class="d-flex align-items-center gap-2 btn btn-link text-decoration-none p-0" data-bs-toggle="dropdown" aria-label="قائمة المستخدم">
+                        <div class="avatar-circle avatar-sm">{{ request.user.full_name|slice:":1"|upper }}</div>
+                        <span class="d-none d-md-inline small fw-semibold text-truncate" style="max-width:100px;color:var(--text-primary);">{{ request.user.full_name|truncatechars:12 }}</span>
+                        <i class="bi bi-chevron-down d-none d-md-inline" style="font-size:0.6rem;color:var(--text-secondary);"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg">
                         <li>
                             <div class="dropdown-header">
-                                <strong>{{ request.user.full_name }}</strong>
-                                <br><small class="text-muted">{{ user_role }}</small>
+                                <strong class="text-truncate d-block">{{ request.user.full_name }}</strong>
+                                <small class="text-muted">{{ user_role }}</small>
                             </div>
                         </li>
                         <li><hr class="dropdown-divider"></li>
@@ -463,14 +278,14 @@
 
         <!-- Toast Messages -->
         {% if messages %}
-        <div class="toast-container">
+        <div class="toast-container" id="toastContainer">
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert" style="min-width:300px;">
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
                 {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>
                 {% elif message.tags == 'error' or message.tags == 'danger' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>
                 {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-circle-fill me-2"></i>
                 {% else %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
-                {{ message }}
+                <span class="text-truncate">{{ message }}</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             {% endfor %}
@@ -478,12 +293,12 @@
         {% endif %}
 
         <!-- Page Content -->
-        <main class="page-content">
+        <main class="page-content" id="pageContent">
             {% block breadcrumb %}{% endblock %}
             {% block dashboard_content %}{% endblock %}
         </main>
 
-        <!-- Footer (hidden on mobile via CSS) -->
+        <!-- Footer (Desktop only) -->
         <footer class="dashboard-footer">
             <small>&copy; 2026 S-ACM Enterprise - نظام إدارة المحتوى الأكاديمي الذكي</small>
         </footer>
@@ -492,240 +307,130 @@
     <!-- ==========================================
          MOBILE BOTTOM NAVIGATION BAR
          ========================================== -->
-    <nav class="mobile-bottom-nav d-lg-none" id="mobileBottomNav">
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" role="navigation" aria-label="التنقل الرئيسي">
         {% if is_instructor %}
-        <a href="{% url 'instructor:dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-            <span class="nav-icon-wrapper">
-                <i class="bi bi-speedometer2 nav-icon"></i>
-            </span>
-            <span class="nav-label">الرئيسية</span>
+        <a href="{% url 'instructor:dashboard' %}" class="bottom-nav-item {% if active_page == 'dashboard' %}active{% endif %}" data-nav="dashboard">
+            <i class="bi {% if active_page == 'dashboard' %}bi-speedometer2{% else %}bi-speedometer2{% endif %}"></i>
+            <span>الرئيسية</span>
         </a>
-        <a href="{% url 'instructor:course_list' %}" class="nav-item {% if active_page == 'courses' %}active{% endif %}">
-            <span class="nav-icon-wrapper">
-                <i class="bi bi-book nav-icon"></i>
-            </span>
-            <span class="nav-label">المقررات</span>
+        <a href="{% url 'instructor:course_list' %}" class="bottom-nav-item {% if active_page == 'courses' %}active{% endif %}" data-nav="courses">
+            <i class="bi bi-book"></i>
+            <span>المقررات</span>
         </a>
-        <a href="{% url 'notifications:management' %}" class="nav-item {% if active_page == 'notifications' %}active{% endif %}">
-            <span class="nav-icon-wrapper">
-                <i class="bi bi-bell nav-icon"></i>
-            </span>
-            <span class="nav-label">الإشعارات</span>
+        <a href="{% url 'notifications:management' %}" class="bottom-nav-item {% if active_page == 'notifications' %}active{% endif %}" data-nav="notifications">
+            <i class="bi bi-bell"></i>
+            <span>الإشعارات</span>
             {% if unread_count and unread_count > 0 %}
-            <span class="nav-badge">{{ unread_count }}</span>
+            <span class="bottom-nav-badge">{{ unread_count }}</span>
             {% endif %}
         </a>
-        <button class="nav-item" onclick="toggleMobileDrawer()" type="button">
-            <span class="nav-icon-wrapper">
-                <i class="bi bi-grid nav-icon"></i>
-            </span>
-            <span class="nav-label">المزيد</span>
+        <a href="{% url 'accounts:profile' %}" class="bottom-nav-item {% if active_page == 'profile' %}active{% endif %}" data-nav="profile">
+            <i class="bi bi-person"></i>
+            <span>حسابي</span>
+        </a>
+        <button class="bottom-nav-item" id="moreMenuBtn" type="button" data-nav="more" aria-label="المزيد">
+            <i class="bi bi-grid-3x3-gap"></i>
+            <span>المزيد</span>
         </button>
+
         {% elif is_student %}
-        <a href="{% url 'student:dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-            <span class="nav-icon-wrapper">
-                <i class="bi bi-speedometer2 nav-icon"></i>
-            </span>
-            <span class="nav-label">الرئيسية</span>
+        <a href="{% url 'student:dashboard' %}" class="bottom-nav-item {% if active_page == 'dashboard' %}active{% endif %}" data-nav="dashboard">
+            <i class="bi bi-speedometer2"></i>
+            <span>الرئيسية</span>
         </a>
-        <a href="{% url 'student:course_list' %}" class="nav-item {% if active_page == 'courses' %}active{% endif %}">
-            <span class="nav-icon-wrapper">
-                <i class="bi bi-book nav-icon"></i>
-            </span>
-            <span class="nav-label">المقررات</span>
+        <a href="{% url 'student:course_list' %}" class="bottom-nav-item {% if active_page == 'courses' %}active{% endif %}" data-nav="courses">
+            <i class="bi bi-book"></i>
+            <span>المقررات</span>
         </a>
-        <a href="{% url 'notifications:management' %}" class="nav-item {% if active_page == 'notifications' %}active{% endif %}">
-            <span class="nav-icon-wrapper">
-                <i class="bi bi-bell nav-icon"></i>
-            </span>
-            <span class="nav-label">الإشعارات</span>
+        <a href="{% url 'notifications:management' %}" class="bottom-nav-item {% if active_page == 'notifications' %}active{% endif %}" data-nav="notifications">
+            <i class="bi bi-bell"></i>
+            <span>الإشعارات</span>
             {% if unread_count and unread_count > 0 %}
-            <span class="nav-badge">{{ unread_count }}</span>
+            <span class="bottom-nav-badge">{{ unread_count }}</span>
             {% endif %}
         </a>
-        <button class="nav-item" onclick="toggleMobileDrawer()" type="button">
-            <span class="nav-icon-wrapper">
-                <i class="bi bi-grid nav-icon"></i>
-            </span>
-            <span class="nav-label">المزيد</span>
+        <a href="{% url 'accounts:profile' %}" class="bottom-nav-item {% if active_page == 'profile' %}active{% endif %}" data-nav="profile">
+            <i class="bi bi-person"></i>
+            <span>حسابي</span>
+        </a>
+        <button class="bottom-nav-item" id="moreMenuBtn" type="button" data-nav="more" aria-label="المزيد">
+            <i class="bi bi-grid-3x3-gap"></i>
+            <span>المزيد</span>
         </button>
         {% endif %}
     </nav>
 
     <!-- ==========================================
-         MOBILE DRAWER (More Menu - Slide from Bottom)
+         MOBILE DRAWER (More Menu)
          ========================================== -->
-    <div class="mobile-drawer-overlay d-lg-none" id="mobileDrawerOverlay" onclick="toggleMobileDrawer()"></div>
-    <div class="mobile-drawer d-lg-none" id="mobileDrawer">
-        <div class="drawer-handle"></div>
+    <div class="mobile-drawer-overlay" id="mobileDrawerOverlay"></div>
+    <div class="mobile-drawer" id="mobileDrawer" role="dialog" aria-label="قائمة إضافية">
+        <div class="drawer-handle" aria-hidden="true"></div>
         <div class="drawer-header">
             <h3>المزيد</h3>
-            <button class="drawer-close" onclick="toggleMobileDrawer()">
+            <button class="drawer-close-btn" id="drawerCloseBtn" type="button" aria-label="إغلاق">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
         <div class="drawer-body">
             <div class="drawer-grid">
                 {% if is_instructor %}
-                <a href="{% url 'instructor:ai_hub' %}" class="drawer-grid-item {% if active_page == 'ai_hub' %}active{% endif %}">
-                    <i class="bi bi-robot"></i>
-                    <span>مركز AI</span>
+                <a href="{% url 'instructor:ai_hub' %}" class="drawer-item {% if active_page == 'ai_hub' %}active{% endif %}">
+                    <div class="drawer-item-icon"><i class="bi bi-robot"></i></div>
+                    <span class="text-truncate">مركز AI</span>
                 </a>
-                <a href="{% url 'instructor:reports' %}" class="drawer-grid-item {% if active_page == 'reports' %}active{% endif %}">
-                    <i class="bi bi-bar-chart-line"></i>
-                    <span>التقارير</span>
+                <a href="{% url 'instructor:reports' %}" class="drawer-item {% if active_page == 'reports' %}active{% endif %}">
+                    <div class="drawer-item-icon"><i class="bi bi-bar-chart-line"></i></div>
+                    <span class="text-truncate">التقارير</span>
                 </a>
-                <a href="{% url 'instructor:trash_list' %}" class="drawer-grid-item {% if active_page == 'trash' %}active{% endif %}">
-                    <i class="bi bi-trash3"></i>
-                    <span>المهملات</span>
+                <a href="{% url 'instructor:file_upload' %}" class="drawer-item">
+                    <div class="drawer-item-icon"><i class="bi bi-cloud-upload"></i></div>
+                    <span class="text-truncate">رفع ملف</span>
                 </a>
-                <a href="{% url 'instructor:settings' %}" class="drawer-grid-item {% if active_page == 'settings' %}active{% endif %}">
-                    <i class="bi bi-gear"></i>
-                    <span>الإعدادات</span>
+                <a href="{% url 'instructor:trash_list' %}" class="drawer-item {% if active_page == 'trash' %}active{% endif %}">
+                    <div class="drawer-item-icon"><i class="bi bi-trash3"></i></div>
+                    <span class="text-truncate">المهملات</span>
                 </a>
-                <a href="{% url 'accounts:profile' %}" class="drawer-grid-item">
-                    <i class="bi bi-person"></i>
-                    <span>الملف الشخصي</span>
+                <a href="{% url 'instructor:settings' %}" class="drawer-item {% if active_page == 'settings' %}active{% endif %}">
+                    <div class="drawer-item-icon"><i class="bi bi-gear"></i></div>
+                    <span class="text-truncate">الإعدادات</span>
                 </a>
-                <a href="{% url 'accounts:logout' %}" class="drawer-grid-item" style="color: var(--mobile-danger);">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span>خروج</span>
+                <a href="{% url 'accounts:logout' %}" class="drawer-item drawer-item-danger">
+                    <div class="drawer-item-icon"><i class="bi bi-box-arrow-right"></i></div>
+                    <span class="text-truncate">خروج</span>
                 </a>
                 {% elif is_student %}
-                <a href="{% url 'student:ai_center' %}" class="drawer-grid-item {% if active_page == 'ai_center' %}active{% endif %}">
-                    <i class="bi bi-stars"></i>
-                    <span>مركز AI</span>
+                <a href="{% url 'student:ai_center' %}" class="drawer-item {% if active_page == 'ai_center' %}active{% endif %}">
+                    <div class="drawer-item-icon"><i class="bi bi-stars"></i></div>
+                    <span class="text-truncate">مركز AI</span>
                 </a>
-                <a href="{% url 'ai_features:usage_stats' %}" class="drawer-grid-item">
-                    <i class="bi bi-bar-chart"></i>
-                    <span>إحصائيات AI</span>
+                <a href="{% url 'ai_features:usage_stats' %}" class="drawer-item">
+                    <div class="drawer-item-icon"><i class="bi bi-bar-chart"></i></div>
+                    <span class="text-truncate">إحصائيات AI</span>
                 </a>
-                <a href="{% url 'student:settings' %}" class="drawer-grid-item {% if active_page == 'settings' %}active{% endif %}">
-                    <i class="bi bi-gear"></i>
-                    <span>الإعدادات</span>
+                <a href="{% url 'student:settings' %}" class="drawer-item {% if active_page == 'settings' %}active{% endif %}">
+                    <div class="drawer-item-icon"><i class="bi bi-gear"></i></div>
+                    <span class="text-truncate">الإعدادات</span>
                 </a>
-                <a href="{% url 'accounts:profile' %}" class="drawer-grid-item">
-                    <i class="bi bi-person"></i>
-                    <span>الملف الشخصي</span>
+                <a href="{% url 'accounts:change_password' %}" class="drawer-item">
+                    <div class="drawer-item-icon"><i class="bi bi-key"></i></div>
+                    <span class="text-truncate">كلمة المرور</span>
                 </a>
-                <a href="{% url 'accounts:change_password' %}" class="drawer-grid-item">
-                    <i class="bi bi-key"></i>
-                    <span>كلمة المرور</span>
-                </a>
-                <a href="{% url 'accounts:logout' %}" class="drawer-grid-item" style="color: var(--mobile-danger);">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span>خروج</span>
+                <a href="{% url 'accounts:logout' %}" class="drawer-item drawer-item-danger">
+                    <div class="drawer-item-icon"><i class="bi bi-box-arrow-right"></i></div>
+                    <span class="text-truncate">خروج</span>
                 </a>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- ==========================================
+         SCRIPTS
+         ========================================== -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script>
-        // === Mobile Sidebar Toggle ===
-        function toggleMobileSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
-            document.getElementById('sidebarOverlay').classList.toggle('show');
-        }
-
-        // === Desktop Sidebar Collapse/Expand ===
-        function toggleSidebarCollapse() {
-            const sidebar = document.getElementById('sidebar');
-            const body = document.body;
-            const isCollapsed = sidebar.classList.toggle('collapsed');
-            body.classList.toggle('sidebar-collapsed', isCollapsed);
-
-            // Save state to localStorage
-            localStorage.setItem('sidebar-collapsed', isCollapsed ? 'true' : 'false');
-        }
-
-        // Restore sidebar state on load
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedState = localStorage.getItem('sidebar-collapsed');
-            if (savedState === 'true') {
-                document.getElementById('sidebar').classList.add('collapsed');
-                document.body.classList.add('sidebar-collapsed');
-            }
-        });
-
-        // Auto-dismiss toasts
-        setTimeout(() => {
-            document.querySelectorAll('.toast-container .alert').forEach(el => {
-                let bsAlert = bootstrap.Alert.getOrCreateInstance(el);
-                if (bsAlert) bsAlert.close();
-            });
-        }, 5000);
-
-        // === Mobile Drawer Toggle ===
-        function toggleMobileDrawer() {
-            const drawer = document.getElementById('mobileDrawer');
-            const overlay = document.getElementById('mobileDrawerOverlay');
-            if (drawer && overlay) {
-                drawer.classList.toggle('show');
-                overlay.classList.toggle('show');
-                // Prevent body scroll when drawer is open
-                if (drawer.classList.contains('show')) {
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    document.body.style.overflow = '';
-                }
-            }
-        }
-
-        // === Mobile Drawer Swipe-to-Close ===
-        (function() {
-            const drawer = document.getElementById('mobileDrawer');
-            if (!drawer) return;
-            let startY = 0;
-            let currentY = 0;
-            let isDragging = false;
-
-            drawer.addEventListener('touchstart', function(e) {
-                // Only start drag from the handle area (top 50px)
-                if (e.touches[0].clientY - drawer.getBoundingClientRect().top < 50) {
-                    startY = e.touches[0].clientY;
-                    isDragging = true;
-                    drawer.style.transition = 'none';
-                }
-            }, { passive: true });
-
-            drawer.addEventListener('touchmove', function(e) {
-                if (!isDragging) return;
-                currentY = e.touches[0].clientY;
-                const diff = currentY - startY;
-                if (diff > 0) {
-                    drawer.style.transform = `translateY(${diff}px)`;
-                }
-            }, { passive: true });
-
-            drawer.addEventListener('touchend', function() {
-                if (!isDragging) return;
-                isDragging = false;
-                drawer.style.transition = '';
-                const diff = currentY - startY;
-                if (diff > 100) {
-                    toggleMobileDrawer();
-                }
-                drawer.style.transform = '';
-                startY = 0;
-                currentY = 0;
-            }, { passive: true });
-        })();
-
-        // === Highlight Active Bottom Nav Item ===
-        (function() {
-            const currentPath = window.location.pathname;
-            document.querySelectorAll('.mobile-bottom-nav .nav-item[href]').forEach(function(item) {
-                const href = item.getAttribute('href');
-                if (href && currentPath.startsWith(href)) {
-                    item.classList.add('active');
-                }
-            });
-        })();
-    </script>
+    <script src="{% static 'js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
