@@ -67,102 +67,99 @@ class StudentDashboardView(LoginRequiredMixin, StudentRequiredMixin, TemplateVie
         context['active_page'] = 'dashboard'
         student = self.request.user
 
-        # === Query 1: Current courses with annotated stats ===
-        # Prefetch instructor_courses to avoid N+1
-        instructor_prefetch = Prefetch(
-            'instructor_courses',
-            queryset=(
-                __import__('apps.courses.models', fromlist=['InstructorCourse'])
-                .InstructorCourse.objects
-                .select_related('instructor')
-            ),
-        )
-
-        current_courses = (
-            Course.objects
-            .get_current_courses_for_student(student)
-            .prefetch_related(instructor_prefetch)
-            .annotate(
-                # Count visible non-deleted files per course
-                visible_file_count=Count(
-                    'files',
-                    filter=Q(files__is_visible=True, files__is_deleted=False),
+        try:
+            # === Query 1: Current courses with annotated stats ===
+            # Prefetch instructor_courses to avoid N+1
+            instructor_prefetch = Prefetch(
+                'instructor_courses',
+                queryset=(
+                    __import__('apps.courses.models', fromlist=['InstructorCourse'])
+                    .InstructorCourse.objects
+                    .select_related('instructor')
                 ),
-                # Count files this student has viewed (progress > 0)
-                viewed_file_count=Count(
-                    'files__student_progress',
-                    filter=Q(
-                        files__student_progress__student=student,
-                        files__student_progress__progress__gt=0,
+            )
+
+            current_courses = (
+                Course.objects
+                .get_current_courses_for_student(student)
+                .prefetch_related(instructor_prefetch)
+                .annotate(
+                    visible_file_count=Count(
+                        'files',
+                        filter=Q(files__is_visible=True, files__is_deleted=False),
                     ),
-                ),
+                    viewed_file_count=Count(
+                        'files__student_progress',
+                        filter=Q(
+                            files__student_progress__student=student,
+                            files__student_progress__progress__gt=0,
+                        ),
+                    ),
+                )
             )
-        )
-        context['current_courses'] = current_courses
-        context['archived_courses'] = Course.objects.get_archived_courses_for_student(student)
+            context['current_courses'] = current_courses
+            context['archived_courses'] = Course.objects.get_archived_courses_for_student(student)
 
-        # === Build course progress from annotated data (ZERO extra queries) ===
-        course_progress = []
-        for course in current_courses:
-            total_files = course.visible_file_count
-            viewed_files = course.viewed_file_count
-            progress_pct = min(100, int((viewed_files / total_files) * 100)) if total_files > 0 else 0
+            # === Build course progress from annotated data (ZERO extra queries) ===
+            course_progress = []
+            for course in current_courses:
+                total_files = course.visible_file_count
+                viewed_files = course.viewed_file_count
+                progress_pct = min(100, int((viewed_files / total_files) * 100)) if total_files > 0 else 0
+                instructor_rel = course.instructor_courses.all()
+                instructor_name = (
+                    instructor_rel[0].instructor.full_name
+                    if instructor_rel else '-'
+                )
+                course_progress.append({
+                    'course': course,
+                    'progress': progress_pct,
+                    'total_files': total_files,
+                    'viewed_files': viewed_files,
+                    'instructor': instructor_name,
+                })
+            context['course_progress'] = course_progress
 
-            # Get instructor from prefetched data (no extra query)
-            instructor_rel = course.instructor_courses.all()
-            instructor_name = (
-                instructor_rel[0].instructor.full_name
-                if instructor_rel else '-'
+            # === Resume learning ===
+            last_progress = (
+                StudentProgress.objects
+                .filter(student=student, progress__lt=100)
+                .select_related('file', 'file__course')
+                .order_by('-last_accessed')
+                .first()
+            )
+            context['resume_item'] = last_progress
+            context['unread_notifications'] = NotificationService.get_unread_count(student)
+
+            context['recent_files'] = (
+                LectureFile.objects
+                .filter(
+                    course__in=current_courses,
+                    is_visible=True, is_deleted=False
+                )
+                .select_related('course')
+                .order_by('-upload_date')[:5]
             )
 
-            course_progress.append({
-                'course': course,
-                'progress': progress_pct,
-                'total_files': total_files,
-                'viewed_files': viewed_files,
-                'instructor': instructor_name,
-            })
-        context['course_progress'] = course_progress
-
-        # === Query 2: Resume learning - last accessed incomplete file ===
-        last_progress = (
-            StudentProgress.objects
-            .filter(student=student, progress__lt=100)
-            .select_related('file', 'file__course')
-            .order_by('-last_accessed')
-            .first()
-        )
-        context['resume_item'] = last_progress
-
-        # === Notification count (uses cached context_processor mostly) ===
-        context['unread_notifications'] = NotificationService.get_unread_count(student)
-
-        # === Recent files across all current courses ===
-        context['recent_files'] = (
-            LectureFile.objects
-            .filter(
-                course__in=current_courses,
-                is_visible=True, is_deleted=False
-            )
-            .select_related('course')
-            .order_by('-upload_date')[:5]
-        )
-
-        # === Quick stats (batched as much as possible) ===
-        today_date = timezone.now().date()
-        context['stats'] = {
-            'total_courses': current_courses.count(),
-            'files_viewed': StudentProgress.objects.filter(
-                student=student, progress__gt=0
-            ).count(),
-            'ai_used_today': AIUsageLog.objects.filter(
-                user=student,
-                request_time__date=today_date
-            ).count(),
-            'ai_remaining': AIUsageLog.get_remaining_requests(student),
-            'total_summaries': AISummary.objects.filter(user=student).count(),
-            'total_questions': AIGeneratedQuestion.objects.filter(user=student).count(),
-        }
+            today_date = timezone.now().date()
+            context['stats'] = {
+                'total_courses': current_courses.count(),
+                'files_viewed': StudentProgress.objects.filter(
+                    student=student, progress__gt=0
+                ).count(),
+                'ai_used_today': AIUsageLog.objects.filter(
+                    user=student,
+                    request_time__date=today_date
+                ).count(),
+                'ai_remaining': 9999,
+                'total_summaries': AISummary.objects.filter(user=student).count(),
+                'total_questions': AIGeneratedQuestion.objects.filter(user=student).count(),
+            }
+        except Exception as e:
+            logger.error(f"StudentDashboardView error: {e}", exc_info=True)
+            context.setdefault('current_courses', [])
+            context.setdefault('course_progress', [])
+            context.setdefault('stats', {})
 
         return context
 
@@ -249,7 +246,7 @@ class StudyRoomView(LoginRequiredMixin, StudentRequiredMixin, View):
         # محادثات AI السابقة
         chat_history = AIChat.objects.filter(
             file=file_obj, user=request.user
-        ).order_by('created_at')[:50]
+        ).order_by('created_at')
 
         # ملخص موجود
         existing_summary = AISummary.objects.filter(file=file_obj).first()
@@ -271,7 +268,7 @@ class StudyRoomView(LoginRequiredMixin, StudentRequiredMixin, View):
             'existing_summary': existing_summary,
             'prev_file': prev_file,
             'next_file': next_file,
-            'remaining_requests': AIUsageLog.get_remaining_requests(request.user),
+            'remaining_requests': 9999,  # Unlimited
             'active_page': 'study_room',
         }
 
@@ -294,14 +291,6 @@ class AIChatView(LoginRequiredMixin, StudentRequiredMixin, View):
             if is_ajax:
                 return JsonResponse({'success': False, 'error': 'يرجى إدخال سؤال.'})
             messages.error(request, 'يرجى إدخال سؤال.')
-            return redirect('student:study_room', file_pk=file_pk)
-
-        # Rate limit check
-        if not AIUsageLog.check_rate_limit(request.user):
-            error = 'تجاوزت الحد المسموح. حاول بعد ساعة.'
-            if is_ajax:
-                return JsonResponse({'success': False, 'error': error})
-            messages.error(request, error)
             return redirect('student:study_room', file_pk=file_pk)
 
         try:
@@ -500,10 +489,6 @@ class MultiContextProcessView(LoginRequiredMixin, StudentRequiredMixin, View):
             messages.error(request, 'يرجى اختيار ملف واحد على الأقل.')
             return redirect('student:ai_center')
 
-        if not AIUsageLog.check_rate_limit(request.user):
-            messages.error(request, 'تجاوزت الحد المسموح. حاول بعد ساعة.')
-            return redirect('student:ai_center')
-
         try:
             from apps.ai_features.services import GeminiService, QuestionMatrixConfig
 
@@ -523,7 +508,7 @@ class MultiContextProcessView(LoginRequiredMixin, StudentRequiredMixin, View):
             for f in files:
                 text = service.extract_text_from_file(f)
                 if text:
-                    aggregated_text += f"\n\n--- [{f.title}] ---\n\n{text}"
+                    aggregated_text += f"\n\n[FILE: {f.title}]\n\n{text}"
                     file_titles.append(f.title)
 
             if not aggregated_text.strip():
@@ -670,3 +655,93 @@ class CourseFilesAjaxStudentView(LoginRequiredMixin, StudentRequiredMixin, View)
             return HttpResponse(html)
 
         return JsonResponse({'files': list(files)})
+
+
+# ========== Student Reports & Statistics ==========
+
+class StudentReportsView(LoginRequiredMixin, StudentRequiredMixin, TemplateView):
+    """تقارير وإحصائيات الطالب"""
+    template_name = 'student/reports.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'reports'
+        student = self.request.user
+
+        try:
+            # Current courses
+            courses = Course.objects.get_current_courses_for_student(student)
+
+            # Overall stats
+            total_files_viewed = StudentProgress.objects.filter(
+                student=student, progress__gt=0
+            ).count()
+
+            total_files_completed = StudentProgress.objects.filter(
+                student=student, progress=100
+            ).count()
+
+            # AI usage stats
+            total_ai_requests = AIUsageLog.objects.filter(user=student).count()
+            total_summaries = AISummary.objects.filter(user=student).count()
+            total_questions = AIGeneratedQuestion.objects.filter(user=student).count()
+            total_chats = AIChat.objects.filter(user=student).count()
+
+            # Today's activity
+            today = timezone.now().date()
+            today_ai = AIUsageLog.objects.filter(
+                user=student, request_time__date=today
+            ).count()
+            today_views = UserActivity.objects.filter(
+                user=student, activity_type='view',
+                activity_time__date=today
+            ).count()
+
+            # Course progress
+            course_stats = []
+            for course in courses:
+                visible_files = course.files.filter(is_visible=True, is_deleted=False).count()
+                viewed = StudentProgress.objects.filter(
+                    student=student, file__course=course, progress__gt=0
+                ).count()
+                completed = StudentProgress.objects.filter(
+                    student=student, file__course=course, progress=100
+                ).count()
+                progress_pct = min(100, int((viewed / visible_files) * 100)) if visible_files > 0 else 0
+
+                course_stats.append({
+                    'course': course,
+                    'total_files': visible_files,
+                    'viewed': viewed,
+                    'completed': completed,
+                    'progress': progress_pct,
+                })
+
+            # Recent activity timeline
+            recent_activities = UserActivity.objects.filter(
+                user=student
+            ).order_by('-activity_time')[:20]
+
+            # AI usage by type
+            ai_by_type = {
+                'summaries': total_summaries,
+                'questions': total_questions,
+                'chats': total_chats,
+            }
+
+            context.update({
+                'total_courses': courses.count(),
+                'total_files_viewed': total_files_viewed,
+                'total_files_completed': total_files_completed,
+                'total_ai_requests': total_ai_requests,
+                'today_ai': today_ai,
+                'today_views': today_views,
+                'course_stats': course_stats,
+                'recent_activities': recent_activities,
+                'ai_by_type': ai_by_type,
+            })
+        except Exception as e:
+            logger.error(f"StudentReportsView error: {e}", exc_info=True)
+            context['error'] = 'حدث خطأ أثناء تحميل التقارير.'
+
+        return context

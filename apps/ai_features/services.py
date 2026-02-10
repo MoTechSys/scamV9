@@ -36,6 +36,26 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
+# ========== Master System Prompt ==========
+MASTER_SYSTEM_PROMPT = """
+ROLE: You are 'The Smart Academic Assistant' in the S-ACM system. Your task is to process composite educational content based on specific requests.
+
+CONTEXT UNDERSTANDING:
+- You will receive texts from multiple files, separated by markers [FILE: filename].
+- You must cross-reference information between files and cite sources when presenting key information.
+
+ACTION EXECUTION:
+- If 'summarize': Provide a structured summary linking all specified files.
+- If 'chat': Answer precisely based on information from all combined files.
+- If 'quiz': Extract questions from the core of the combined content.
+
+FORMATTING RULES:
+- Use full Markdown formatting (headings, tables, lists, bold, code blocks).
+- Be precise, academic, and direct in your answers.
+- Always respond in Arabic unless specified otherwise.
+- Keep Arabic text while placing English technical terms in parentheses where relevant.
+"""
+
 # ========== Logging ==========
 logger = logging.getLogger('ai_features')
 
@@ -702,10 +722,11 @@ class GeminiService:
             try:
                 start_ms = int(time.time() * 1000)
 
-                # Use OpenAI chat.completions.create format
+                # Use OpenAI chat.completions.create format with system prompt
                 response = self._client.chat.completions.create(
                     model=self._model_name,
                     messages=[
+                        {"role": "system", "content": MASTER_SYSTEM_PROMPT},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=max_tokens,

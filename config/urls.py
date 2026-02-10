@@ -45,3 +45,9 @@ if settings.DEBUG:
 admin.site.site_header = "إدارة S-ACM"
 admin.site.site_title = "لوحة تحكم S-ACM"
 admin.site.index_title = "مرحباً بك في نظام إدارة المحتوى الأكاديمي الذكي"
+
+# Custom error handlers
+handler400 = 'apps.core.views.custom_400'
+handler403 = 'apps.core.views.custom_403'
+handler404 = 'apps.core.views.custom_404'
+handler500 = 'apps.core.views.custom_500'

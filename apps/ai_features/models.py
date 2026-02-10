@@ -97,8 +97,8 @@ class AIConfiguration(models.Model):
 
     # --- Rate Limiting ---
     user_rate_limit_per_hour = models.PositiveIntegerField(
-        default=10,
-        validators=[MinValueValidator(1), MaxValueValidator(1000)],
+        default=9999,
+        validators=[MinValueValidator(1), MaxValueValidator(99999)],
         verbose_name='حد الطلبات/ساعة للمستخدم',
         help_text='الحد الأقصى لطلبات AI لكل مستخدم في الساعة'
     )

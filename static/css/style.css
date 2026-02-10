@@ -1,61 +1,20 @@
 /**
- * S-ACM Design System v3.1
+ * S-ACM Design System v3.2
  * Smart Academic Content Management System
  * 
  * Architecture:
- *   1. Font Face Definitions (Tajawal - local + CDN fallback)
- *   2. CSS Custom Properties (Design Tokens)
- *   3. Base & Reset
- *   4. Desktop Sidebar (Glassmorphism + Collapsible)
- *   5. Top Navbar
- *   6. Main Content Layout
- *   7. Cards & Stat Cards (Compact)
- *   8. Tables, Forms, Buttons
- *   9. Utilities & Components
- *  10. Desktop Responsive Overrides
+ *   1. CSS Custom Properties (Design Tokens)
+ *   2. Base & Reset
+ *   3. Desktop Sidebar (Glassmorphism + Collapsible)
+ *   4. Top Navbar
+ *   5. Main Content Layout
+ *   6. Cards & Stat Cards (Compact)
+ *   7. Tables, Forms, Buttons
+ *   8. Utilities & Components
+ *   9. Desktop Responsive Overrides
  *
- * Note: Tajawal is loaded both locally (@font-face) and via Google Fonts CDN
- * in the HTML head. The local woff2 files take priority when available.
+ * Note: Uses system fonts only for maximum performance.
  */
-
-/* ==========================================================
-   1. FONT FACE - Tajawal (Local woff2 - highest priority)
-   ========================================================== */
-@font-face {
-    font-family: 'Tajawal';
-    src: url('../fonts/Tajawal-Light.woff2') format('woff2');
-    font-weight: 300;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Tajawal';
-    src: url('../fonts/Tajawal-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Tajawal';
-    src: url('../fonts/Tajawal-Medium.woff2') format('woff2');
-    font-weight: 500;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Tajawal';
-    src: url('../fonts/Tajawal-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Tajawal';
-    src: url('../fonts/Tajawal-ExtraBold.woff2') format('woff2');
-    font-weight: 800;
-    font-style: normal;
-    font-display: swap;
-}
 
 /* ==========================================================
    2. CSS CUSTOM PROPERTIES (Design Tokens)
@@ -103,8 +62,8 @@
     --radius-xl: 20px;
     --radius-full: 9999px;
 
-    /* Typography - Tajawal first */
-    --font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif;
+    /* Typography - System fonts only for performance */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Arabic', sans-serif;
 
     /* Transitions */
     --transition-fast: 0.15s ease;

@@ -18,20 +18,38 @@
                     {% csrf_token %}
                     <!-- Source Selection -->
                     <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">المقرر</label>
-                            <select class="form-select" id="courseSelect" name="course_id" onchange="loadFiles(this.value)" required>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold"><i class="bi bi-book me-1"></i>المقرر</label>
+                            <select class="form-select" id="courseSelect" name="course_id"
+                                    hx-get="{% url 'instructor:course_files_ajax' %}"
+                                    hx-target="#filesList"
+                                    hx-trigger="change"
+                                    hx-include="[name='course_id']"
+                                    hx-vals='js:{"course_id": document.getElementById("courseSelect").value}'>
                                 <option value="">اختر المقرر...</option>
                                 {% for course in courses %}
                                 <option value="{{ course.pk }}">{{ course.course_code }} - {{ course.course_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">الملف</label>
-                            <select class="form-select" id="fileSelect" name="file_id" required>
-                                <option value="">اختر المقرر أولاً...</option>
-                            </select>
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold"><i class="bi bi-files me-1"></i>اختر الملفات</label>
+                            <div class="border rounded" style="max-height:250px; overflow-y:auto;">
+                                <div id="filesList">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="bi bi-arrow-right-circle me-1"></i>اختر المقرر أولاً لعرض الملفات
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleAllFiles(true)">
+                                    <i class="bi bi-check-all me-1"></i>تحديد الكل
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAllFiles(false)">
+                                    <i class="bi bi-x-lg me-1"></i>إلغاء التحديد
+                                </button>
+                                <small class="text-muted align-self-center ms-auto" id="selectedCount">0 ملفات محددة</small>
+                            </div>
                         </div>
                     </div>
 
@@ -77,7 +95,7 @@
                         <label class="form-check-label" for="genSummary">توليد ملخص أيضاً</label>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                    <button type="submit" class="btn btn-primary btn-lg w-100" id="generateBtn">
                         <i class="bi bi-stars me-2"></i>توليد بالذكاء الاصطناعي
                     </button>
                 </form>
@@ -126,18 +144,34 @@
 
 {% block extra_js %}
 <script>
-function loadFiles(courseId) {
-    const fileSelect = document.getElementById('fileSelect');
-    fileSelect.innerHTML = '<option value="">جاري التحميل...</option>';
-    if (!courseId) { fileSelect.innerHTML = '<option value="">اختر المقرر أولاً...</option>'; return; }
-    fetch(`{% url 'instructor:course_files_ajax' %}?course_id=${courseId}`)
-        .then(r => r.json()).then(data => {
-            fileSelect.innerHTML = '<option value="">اختر الملف...</option>';
-            data.files.forEach(f => {
-                fileSelect.innerHTML += `<option value="${f.id}">${f.title} (${f.file_extension || f.file_type})</option>`;
-            });
-        }).catch(() => { fileSelect.innerHTML = '<option value="">خطأ في التحميل</option>'; });
+// Select/Deselect all files
+function toggleAllFiles(selectAll) {
+    document.querySelectorAll('#filesList .file-checkbox').forEach(cb => {
+        cb.checked = selectAll;
+    });
+    updateSelectedCount();
 }
+
+// Update selected count
+function updateSelectedCount() {
+    const count = document.querySelectorAll('#filesList .file-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = count + ' ملفات محددة';
+}
+
+// Listen for checkbox changes (delegated)
+document.getElementById('filesList').addEventListener('change', function(e) {
+    if (e.target.classList.contains('file-checkbox')) {
+        updateSelectedCount();
+    }
+});
+
+// HTMX after-swap: update count after files load
+document.body.addEventListener('htmx:afterSwap', function(e) {
+    if (e.detail.target.id === 'filesList') {
+        updateSelectedCount();
+    }
+});
+
 // Calculate totals
 document.querySelectorAll('.q-count, .q-score').forEach(el => {
     el.addEventListener('input', () => {
