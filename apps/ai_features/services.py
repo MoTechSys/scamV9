@@ -455,9 +455,15 @@ class AIFileStorage:
         lines = ["# \u0628\u0646\u0643 \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0645\u064f\u0648\u0644\u064e\u0651\u062f\u0629 \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a\n"]
 
         if metadata:
-            lines.append(f"**\u0627\u0644\u0645\u0635\u062f\u0631:** {metadata.get('source_file', '\u063a\u064a\u0631 \u0645\u062d\u062f\u062f')}")
-            lines.append(f"**\u0627\u0644\u062a\u0627\u0631\u064a\u062e:** {metadata.get('date', datetime.now().strftime('%Y-%m-%d'))}")
-            lines.append(f"**\u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u062f\u0631\u062c\u0627\u062a:** {metadata.get('total_score', '-')}")
+            source_label = "\u0627\u0644\u0645\u0635\u062f\u0631"
+            source_val = metadata.get('source_file', '\u063a\u064a\u0631 \u0645\u062d\u062f\u062f')
+            lines.append(f"**{source_label}:** {source_val}")
+            date_label = "\u0627\u0644\u062a\u0627\u0631\u064a\u062e"
+            date_val = metadata.get('date', datetime.now().strftime('%Y-%m-%d'))
+            lines.append(f"**{date_label}:** {date_val}")
+            score_label = "\u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u062f\u0631\u062c\u0627\u062a"
+            score_val = metadata.get('total_score', '-')
+            lines.append(f"**{score_label}:** {score_val}")
             lines.append("")
 
         type_labels = {
