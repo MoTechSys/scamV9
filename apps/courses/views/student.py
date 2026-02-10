@@ -12,7 +12,7 @@ from django.views.generic import TemplateView, ListView, DetailView
 from ..models import Course, LectureFile
 from ..mixins import CourseEnrollmentMixin
 from apps.accounts.views import StudentRequiredMixin
-from apps.notifications.models import NotificationManager
+from apps.notifications.services import NotificationManager
 
 
 class StudentDashboardView(LoginRequiredMixin, StudentRequiredMixin, TemplateView):

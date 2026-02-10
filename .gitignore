@@ -26,29 +26,24 @@ ENV/
 env/
 .venv/
 
- Django
+# Django
 *.log
-3local_settings.py
+local_settings.py
 db.sqlite3
+db.sqlite3-journal
 *.pot
 *.pyc
-#----------------------------------------
-# Static and Media files
-#staticfiles/
-#media/uploads/*
-#media/exports/*
-#media/uploads/.gitkeep
-#media/exports/.gitkeep
-#----------------------------------------
-# Environment variables
-#.env
-.env.local#
+
+# Static (collected)
+staticfiles/
+
+# Environment variables (keep .env for Railway)
+.env.local
 .env.production
 !.env.example
 
- Logs
-logs/
-*.log
+# Logs
+logs/*.log
 
 # IDE
 .vscode/
@@ -72,4 +67,3 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
-staticfiles/
