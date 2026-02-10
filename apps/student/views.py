@@ -246,10 +246,10 @@ class StudyRoomView(LoginRequiredMixin, StudentRequiredMixin, View):
             progress.progress = min(100, progress.progress + 10)
             progress.save(update_fields=['progress', 'last_accessed'])
 
-        # محادثات AI السابقة
+        # محادثات AI السابقة (جميع المحادثات بدون حد)
         chat_history = AIChat.objects.filter(
             file=file_obj, user=request.user
-        ).order_by('created_at')[:50]
+        ).order_by('created_at')
 
         # ملخص موجود
         existing_summary = AISummary.objects.filter(file=file_obj).first()
@@ -296,13 +296,7 @@ class AIChatView(LoginRequiredMixin, StudentRequiredMixin, View):
             messages.error(request, 'يرجى إدخال سؤال.')
             return redirect('student:study_room', file_pk=file_pk)
 
-        # Rate limit check
-        if not AIUsageLog.check_rate_limit(request.user):
-            error = 'تجاوزت الحد المسموح. حاول بعد ساعة.'
-            if is_ajax:
-                return JsonResponse({'success': False, 'error': error})
-            messages.error(request, error)
-            return redirect('student:study_room', file_pk=file_pk)
+        # Chat is unlimited - no rate limit for conversations
 
         try:
             from apps.ai_features.services import GeminiService
@@ -318,11 +312,15 @@ class AIChatView(LoginRequiredMixin, StudentRequiredMixin, View):
 
             # تحديد نوع الطلب
             if action == 'summarize':
-                question = 'قم بتلخيص هذا المحتوى بشكل مفصل ومنظم'
+                question = 'قم بتلخيص هذا المحتوى بشكل مفصل ومنظم مع عناوين فرعية ونقاط مرتبة'
             elif action == 'quiz':
-                question = 'أنشئ 5 أسئلة اختبارية متنوعة من هذا المحتوى مع الإجابات'
+                question = 'أنشئ 5 أسئلة اختبارية متنوعة من هذا المحتوى مع الإجابات الصحيحة والشرح'
             elif action == 'explain':
-                question = 'اشرح المفاهيم الرئيسية في هذا المحتوى بطريقة مبسطة'
+                question = 'اشرح المفاهيم الرئيسية في هذا المحتوى بطريقة مبسطة مع أمثلة'
+            elif action == 'keypoints':
+                question = 'استخرج النقاط الرئيسية من هذا المحتوى في قائمة مرتبة ومنظمة'
+            elif action == 'definitions':
+                question = 'استخرج جميع التعريفات والمصطلحات المهمة من هذا المحتوى في جدول منظم'
 
             start_time = time.time()
             answer = service.ask_document(text, question)
@@ -637,7 +635,61 @@ class MultiContextProcessView(LoginRequiredMixin, StudentRequiredMixin, View):
         return redirect('student:ai_center')
 
 
+class StudentReportsView(LoginRequiredMixin, StudentRequiredMixin, TemplateView):
+    """تقارير وإحصائيات الطالب الشاملة"""
+    template_name = 'student/reports.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'reports'
+        student = self.request.user
+        active_tab = self.request.GET.get('tab', 'overview')
+        context['active_tab'] = active_tab
+
+        # Get student's courses
+        courses = Course.objects.get_current_courses_for_student(student)
+        context['courses'] = courses
+
+        # Overview stats
+        context['stats'] = {
+            'total_courses': courses.count(),
+            'files_viewed': StudentProgress.objects.filter(student=student, progress__gt=0).count(),
+            'total_summaries': AISummary.objects.filter(user=student).count(),
+            'total_questions': AIGeneratedQuestion.objects.filter(user=student).count(),
+            'total_chats': AIChat.objects.filter(user=student).count(),
+            'avg_progress': StudentProgress.objects.filter(student=student).aggregate(
+                avg=Coalesce(Avg('progress'), Value(0, output_field=IntegerField()))
+            )['avg'],
+        }
+
+        # Course progress
+        course_stats = []
+        for course in courses:
+            total_files = LectureFile.objects.filter(
+                course=course, is_visible=True, is_deleted=False
+            ).count()
+            viewed = StudentProgress.objects.filter(
+                student=student, file__course=course, progress__gt=0
+            ).count()
+            pct = min(100, int((viewed / total_files) * 100)) if total_files > 0 else 0
+            course_stats.append({
+                'course': course,
+                'total_files': total_files,
+                'viewed_files': viewed,
+                'progress': pct,
+            })
+        context['course_stats'] = course_stats
+
+        # AI usage history
+        context['ai_history'] = AIUsageLog.objects.filter(
+            user=student
+        ).select_related('file', 'file__course').order_by('-request_time')[:20]
+
+        return context
+
+
 class CourseFilesAjaxStudentView(LoginRequiredMixin, StudentRequiredMixin, View):
+
     """إرجاع قائمة ملفات المقرر للطالب (AJAX/HTMX)"""
     def get(self, request):
         course_id = request.GET.get('course_id')

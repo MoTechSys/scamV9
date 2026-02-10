@@ -16,6 +16,9 @@ urlpatterns = [
     # Settings
     path('settings/', views.StudentSettingsView.as_view(), name='settings'),
 
+    # Reports
+    path('reports/', views.StudentReportsView.as_view(), name='reports'),
+
     # Multi-Context AI Center
     path('ai-center/', views.MultiContextAIView.as_view(), name='ai_center'),
     path('ai-center/process/', views.MultiContextProcessView.as_view(), name='ai_center_process'),

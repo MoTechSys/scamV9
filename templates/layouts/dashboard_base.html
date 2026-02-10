@@ -17,11 +17,6 @@
 
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <!-- Tajawal Font (CDN fallback for local @font-face) -->
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
     <!-- Bootstrap 5 RTL -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
@@ -151,6 +146,14 @@
                 <a class="nav-link" href="{% url 'ai_features:usage_stats' %}" title="إحصائيات AI">
                     <i class="bi bi-bar-chart"></i>
                     <span class="link-text">إحصائيات AI</span>
+                </a>
+            </div>
+
+            <div class="sidebar-section-title">التقارير</div>
+            <div class="nav-item">
+                <a class="nav-link {% if active_page == 'reports' %}active{% endif %}" href="{% url 'student:reports' %}" title="تقاريري">
+                    <i class="bi bi-bar-chart-line"></i>
+                    <span class="link-text">تقاريري</span>
                 </a>
             </div>
 
@@ -407,6 +410,10 @@
                 <a href="{% url 'ai_features:usage_stats' %}" class="drawer-item">
                     <div class="drawer-item-icon"><i class="bi bi-bar-chart"></i></div>
                     <span class="text-truncate">إحصائيات AI</span>
+                </a>
+                <a href="{% url 'student:reports' %}" class="drawer-item {% if active_page == 'reports' %}active{% endif %}">
+                    <div class="drawer-item-icon"><i class="bi bi-bar-chart-line"></i></div>
+                    <span class="text-truncate">تقاريري</span>
                 </a>
                 <a href="{% url 'student:settings' %}" class="drawer-item {% if active_page == 'settings' %}active{% endif %}">
                     <div class="drawer-item-icon"><i class="bi bi-gear"></i></div>
