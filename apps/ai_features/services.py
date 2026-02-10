@@ -1,16 +1,18 @@
 """
-خدمات الذكاء الاصطناعي - Google Gemini (Enterprise Edition v2)
+خدمات الذكاء الاصطناعي - Manus API Proxy (OpenAI Compatible)
 S-ACM - Smart Academic Content Management System
 
-=== Phase 2: TANK AI Engine (Dynamic Governance) ===
-1. HydraKeyManager: DB-based Round-Robin with cooldown, RPM enforcement
+=== Phase 3: Manus Proxy Engine ===
+1. SimpleKeyManager: Single key from .env (MANUS_API_KEY) - no DB rotation
 2. SmartChunker: Uses AIConfiguration.chunk_size from DB
-3. GeminiService: Uses AIConfiguration for model/tokens/temperature
-4. All settings are Admin-editable, ZERO .env dependency for AI config
+3. GeminiService: Uses OpenAI-compatible client via Manus API Proxy
+4. All settings are Admin-editable via AIConfiguration
 
-== Legacy Compatibility ==
+== Migration Notes ==
+- Replaced google-genai with openai library
+- HydraKeyManager simplified to SimpleKeyManager (single env key)
+- base_url = https://api.manus.im/api/llm-proxy/v1
 - All public interfaces preserved (GeminiService, QuestionMatrixConfig, etc.)
-- Falls back to .env keys if no DB keys configured
 """
 
 from __future__ import annotations
@@ -39,7 +41,8 @@ logger = logging.getLogger('ai_features')
 
 
 # ========== Constants (Fallbacks - DB config takes priority) ==========
-FALLBACK_MODEL = getattr(settings, 'AI_MODEL_NAME', None) or os.getenv('AI_MODEL_NAME', 'gemini-2.5-flash')
+FALLBACK_MODEL = getattr(settings, 'AI_MODEL_NAME', None) or os.getenv('AI_MODEL_NAME', 'gpt-4.1-mini')
+MANUS_BASE_URL = getattr(settings, 'MANUS_BASE_URL', None) or os.getenv('MANUS_BASE_URL', 'https://api.manus.im/api/llm-proxy/v1')
 FALLBACK_CHUNK_SIZE = 30000
 FALLBACK_CHUNK_OVERLAP = 500
 FALLBACK_MAX_OUTPUT_TOKENS = 2000
@@ -58,17 +61,17 @@ CHUNK_OVERLAP = 500
 # ========== Custom Exceptions ==========
 
 class GeminiError(Exception):
-    """Base exception for Gemini-related errors."""
+    """Base exception for AI-related errors (kept for backward compat)."""
     pass
 
 
 class GeminiConfigurationError(GeminiError):
-    """Raised when Gemini is not properly configured."""
+    """Raised when AI is not properly configured."""
     pass
 
 
 class GeminiAPIError(GeminiError):
-    """Raised when Gemini API returns an error."""
+    """Raised when AI API returns an error."""
     def __init__(self, message: str, status_code: Optional[int] = None):
         super().__init__(message)
         self.status_code = status_code
@@ -174,28 +177,19 @@ class AIResponse:
 
 
 # ========================================================================
-# Phase 2: HYDRA KEY MANAGER (DB-based)
+# Simple Key Manager (Manus API - Single Key from .env)
 # ========================================================================
 
 class HydraKeyManager:
     """
-    The "Hydra" Key Manager - DB-Powered Round-Robin with Cooldown.
+    Simplified Key Manager - Single Manus API Key from environment.
 
-    Features:
-    - Fetches active keys from DB (APIKey model)
-    - Round-Robin rotation across available keys
-    - Automatic cooldown on 429 (Rate Limit) errors
-    - RPM (Requests Per Minute) enforcement per key
-    - Falls back to .env keys if no DB keys exist
-    - Thread-safe singleton
+    Replaces the old DB-based Round-Robin system with a simple
+    environment variable approach for Manus API Proxy.
 
     Usage:
         manager = HydraKeyManager()
-        key_obj, raw_key = manager.get_next_key()
-        # ... use raw_key for API call ...
-        key_obj.mark_success(latency_ms=150)
-        # or on error:
-        key_obj.mark_error("429 Too Many Requests", is_rate_limit=True)
+        key = manager.get_api_key()
     """
     _instance = None
     _lock = threading.Lock()
@@ -211,119 +205,67 @@ class HydraKeyManager:
     def __init__(self):
         if self._initialized:
             return
-        self._current_index = 0
-        self._key_lock = threading.Lock()
-        self._fallback_keys: List[str] = []
-        self._fallback_index = 0
-        self._load_fallback_keys()
+        self._api_key = None
+        self._load_key()
         self._initialized = True
 
-    def _load_fallback_keys(self):
-        """Load fallback keys from .env (legacy support)."""
-        keys = []
-        primary_key = getattr(settings, 'GEMINI_API_KEY', '') or os.getenv('GEMINI_API_KEY', '')
-        if primary_key and primary_key != 'your_gemini_api_key_here':
-            keys.append(primary_key)
-        for i in range(1, 11):
-            key = os.getenv(f'GEMINI_API_KEY_{i}', '')
-            if key and key not in keys:
-                keys.append(key)
-        self._fallback_keys = keys
-        if keys:
-            logger.info(f"HydraKeyManager: Loaded {len(keys)} fallback .env key(s)")
+    def _load_key(self):
+        """Load the Manus API key from environment / settings."""
+        self._api_key = (
+            getattr(settings, 'MANUS_API_KEY', '') or
+            os.getenv('MANUS_API_KEY', '')
+        )
+        if self._api_key:
+            logger.info("HydraKeyManager: Manus API key loaded from environment")
+        else:
+            logger.warning("HydraKeyManager: No MANUS_API_KEY found in environment!")
 
-    def _get_db_keys(self):
-        """Fetch active & available keys from DB."""
-        try:
-            from apps.ai_features.models import APIKey
-            now = timezone.now()
-            return list(
-                APIKey.objects.filter(
-                    provider='gemini',
-                    is_active=True,
-                ).exclude(
-                    status__in=['disabled', 'error']
-                ).order_by('priority', 'pk')
+    def get_api_key(self) -> str:
+        """Get the Manus API key."""
+        if not self._api_key:
+            raise GeminiConfigurationError(
+                "مفتاح MANUS_API_KEY غير موجود. أضف المفتاح في ملف .env"
             )
-        except Exception as e:
-            logger.warning(f"HydraKeyManager: Cannot fetch DB keys: {e}")
-            return []
+        return self._api_key
 
     def get_next_key(self):
         """
-        Get the next available API key using Round-Robin.
-
-        Returns:
-            tuple: (APIKey_instance_or_None, raw_key_string)
-            If using DB key: (APIKey, decrypted_key)
-            If using fallback: (None, env_key)
-
-        Raises:
-            GeminiConfigurationError: If no keys are available.
+        Backward-compatible interface.
+        Returns (None, api_key) to match old signature.
         """
-        with self._key_lock:
-            # Try DB keys first
-            db_keys = self._get_db_keys()
-            available_keys = [k for k in db_keys if k.is_available() and k.check_rpm_limit()]
-
-            if available_keys:
-                key_obj = available_keys[self._current_index % len(available_keys)]
-                self._current_index += 1
-                raw_key = key_obj.get_key()
-                if raw_key:
-                    return key_obj, raw_key
-                logger.warning(f"HydraKeyManager: Key {key_obj.label} decryption failed")
-
-            # Fallback to .env keys
-            if self._fallback_keys:
-                key = self._fallback_keys[self._fallback_index % len(self._fallback_keys)]
-                self._fallback_index += 1
-                logger.info("HydraKeyManager: Using fallback .env key")
-                return None, key
-
-            raise GeminiConfigurationError(
-                "لا توجد مفاتيح API متاحة. أضف مفاتيح من لوحة الإدارة أو في ملف .env"
-            )
-
-    def rotate_after_error(self, failed_key_obj=None, error_msg: str = '', is_rate_limit: bool = False):
-        """Rotate to next key after an error."""
-        if failed_key_obj:
-            failed_key_obj.mark_error(error_msg, is_rate_limit=is_rate_limit)
-        with self._key_lock:
-            self._current_index += 1
-            if not failed_key_obj and self._fallback_keys:
-                self._fallback_index += 1
+        return None, self.get_api_key()
 
     @property
     def total_keys(self) -> int:
-        db_count = len(self._get_db_keys())
-        return db_count + len(self._fallback_keys)
+        return 1 if self._api_key else 0
 
     @property
     def has_keys(self) -> bool:
-        return self.total_keys > 0
+        return bool(self._api_key)
+
+    def rotate_after_error(self, failed_key_obj=None, error_msg: str = '', is_rate_limit: bool = False):
+        """No-op for single key system. Kept for backward compat."""
+        logger.warning(f"HydraKeyManager: Error occurred: {error_msg[:100]}")
 
     def get_health_status(self) -> List[Dict[str, Any]]:
-        """Get health status of all keys (for Admin Dashboard)."""
-        result = []
-        db_keys = self._get_db_keys()
-        for key in db_keys:
-            result.append({
-                'id': key.pk,
-                'label': key.label,
-                'hint': key.key_hint,
-                'status': key.status,
-                'is_available': key.is_available(),
-                'error_count': key.error_count,
-                'total_requests': key.total_requests,
-                'last_latency_ms': key.last_latency_ms,
-                'last_success_at': key.last_success_at,
-                'last_error': key.last_error,
-                'rpm_limit': key.rpm_limit,
-                'tokens_used_today': key.tokens_used_today,
-                'cooldown_until': key.cooldown_until,
-            })
-        return result
+        """Get health status (simplified for single key)."""
+        if self._api_key:
+            return [{
+                'id': 0,
+                'label': 'Manus API Key (ENV)',
+                'hint': self._api_key[-4:] if len(self._api_key) >= 4 else '****',
+                'status': 'active',
+                'is_available': True,
+                'error_count': 0,
+                'total_requests': 0,
+                'last_latency_ms': 0,
+                'last_success_at': None,
+                'last_error': None,
+                'rpm_limit': 0,
+                'tokens_used_today': 0,
+                'cooldown_until': None,
+            }]
+        return []
 
 
 # Legacy compatibility: Alias
@@ -396,7 +338,7 @@ class SmartChunker:
 
     def _split_by_sentences(self, text: str) -> List[str]:
         """تقسيم النص بالجمل."""
-        separators = ['. ', '.\n', '。', '؟ ', '? ', '! ', '！ ', '.\t']
+        separators = ['. ', '.\n', '\u3002', '\u061f ', '? ', '! ', '\uff01 ', '.\t']
         sentences = [text]
         for sep in separators:
             new_sentences = []
@@ -449,7 +391,7 @@ class AIFileStorage:
     def save_chat_answer(self, file_id: int, user_id: int, question: str, answer: str) -> str:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"chat_{file_id}_{user_id}_{timestamp}.md"
-        content = f"# سؤال\n\n{question}\n\n# إجابة\n\n{answer}\n"
+        content = f"# \u0633\u0624\u0627\u0644\n\n{question}\n\n# \u0625\u062c\u0627\u0628\u0629\n\n{answer}\n"
         return self._save_file(filename, content, None, "chat")
 
     def read_file(self, relative_path: str) -> Optional[str]:
@@ -490,18 +432,18 @@ class AIFileStorage:
         return relative_path
 
     def _questions_to_markdown(self, questions: List[Dict], metadata: Optional[Dict] = None) -> str:
-        lines = ["# بنك الأسئلة المُولَّدة بالذكاء الاصطناعي\n"]
+        lines = ["# \u0628\u0646\u0643 \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0645\u064f\u0648\u0644\u064e\u0651\u062f\u0629 \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a\n"]
 
         if metadata:
-            lines.append(f"**المصدر:** {metadata.get('source_file', 'غير محدد')}")
-            lines.append(f"**التاريخ:** {metadata.get('date', datetime.now().strftime('%Y-%m-%d'))}")
-            lines.append(f"**إجمالي الدرجات:** {metadata.get('total_score', '-')}")
+            lines.append(f"**\u0627\u0644\u0645\u0635\u062f\u0631:** {metadata.get('source_file', '\u063a\u064a\u0631 \u0645\u062d\u062f\u062f')}")
+            lines.append(f"**\u0627\u0644\u062a\u0627\u0631\u064a\u062e:** {metadata.get('date', datetime.now().strftime('%Y-%m-%d'))}")
+            lines.append(f"**\u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u062f\u0631\u062c\u0627\u062a:** {metadata.get('total_score', '-')}")
             lines.append("")
 
         type_labels = {
-            'mcq': 'اختيار من متعدد',
-            'true_false': 'صح وخطأ',
-            'short_answer': 'إجابة قصيرة'
+            'mcq': '\u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0646 \u0645\u062a\u0639\u062f\u062f',
+            'true_false': '\u0635\u062d \u0648\u062e\u0637\u0623',
+            'short_answer': '\u0625\u062c\u0627\u0628\u0629 \u0642\u0635\u064a\u0631\u0629'
         }
 
         for i, q in enumerate(questions, 1):
@@ -509,21 +451,21 @@ class AIFileStorage:
             score = q.get('score', 1.0)
             label = type_labels.get(q_type, q_type)
 
-            lines.append(f"## السؤال {i} ({label}) - [{score} درجة]")
+            lines.append(f"## \u0627\u0644\u0633\u0624\u0627\u0644 {i} ({label}) - [{score} \u062f\u0631\u062c\u0629]")
             lines.append(f"\n{q.get('question', '')}\n")
 
             options = q.get('options')
             if options and isinstance(options, list):
                 for j, opt in enumerate(options):
-                    letter = chr(ord('أ') + j) if j < 4 else chr(ord('a') + j)
+                    letter = chr(ord('\u0623') + j) if j < 4 else chr(ord('a') + j)
                     lines.append(f"- {letter}) {opt}")
                 lines.append("")
 
-            lines.append(f"**الإجابة:** {q.get('answer', '')}")
+            lines.append(f"**\u0627\u0644\u0625\u062c\u0627\u0628\u0629:** {q.get('answer', '')}")
 
             explanation = q.get('explanation')
             if explanation:
-                lines.append(f"\n**الشرح:** {explanation}")
+                lines.append(f"\n**\u0627\u0644\u0634\u0631\u062d:** {explanation}")
             lines.append("\n---\n")
 
         return "\n".join(lines)
@@ -668,7 +610,7 @@ class TextExtractorFactory:
 
 
 # ========================================================================
-# Gemini Service (Enterprise v2 - DB Governed)
+# AI Service (Manus API Proxy - OpenAI Compatible)
 # ========================================================================
 
 def _get_ai_config():
@@ -682,19 +624,17 @@ def _get_ai_config():
 
 class GeminiService:
     """
-    خدمة Google Gemini للذكاء الاصطناعي - Enterprise v2.
+    خدمة الذكاء الاصطناعي عبر Manus API Proxy (OpenAI-compatible).
 
-    === Dynamic Governance ===
+    === Manus Proxy Engine ===
+    - Uses OpenAI Python client with Manus base_url
     - Model, tokens, temperature: Read from AIConfiguration (DB)
-    - API Keys: Managed by HydraKeyManager (DB + .env fallback)
+    - API Key: Single MANUS_API_KEY from environment
     - Chunk size: Read from AIConfiguration (DB)
-    - Rate limits: Per-user (DB) + Per-key RPM (DB)
     - Service toggle: Can be disabled from Admin panel
 
     === Admin Editable (No Code Touch) ===
     - Change model: Admin -> AI Configuration -> active_model
-    - Add keys: Admin -> API Keys -> Add
-    - Change RPM: Admin -> API Keys -> rpm_limit
     - Disable service: Admin -> AI Configuration -> is_service_enabled
     """
 
@@ -705,45 +645,35 @@ class GeminiService:
         self._chunker = SmartChunker()
         self._storage = AIFileStorage()
         self._client = None
-        self._current_key_obj = None
         self._initialize_client()
 
     def _check_service_enabled(self):
         """Check if AI service is enabled by admin."""
         config = _get_ai_config()
         if config and not config.is_service_enabled:
-            msg = config.maintenance_message or 'خدمة الذكاء الاصطناعي متوقفة مؤقتاً.'
+            msg = config.maintenance_message or '\u062e\u062f\u0645\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u0645\u062a\u0648\u0642\u0641\u0629 \u0645\u0624\u0642\u062a\u0627\u064b.'
             raise GeminiServiceDisabledError(msg)
 
     def _initialize_client(self) -> None:
-        """تهيئة عميل Gemini باستخدام المفتاح الحالي."""
+        """تهيئة عميل OpenAI عبر Manus API Proxy."""
         if not self._key_manager.has_keys:
-            logger.warning("GeminiService: No API keys available. Service will be limited.")
+            logger.warning("GeminiService: No MANUS_API_KEY available. Service will be limited.")
             return
         try:
-            from google import genai
-            key_obj, raw_key = self._key_manager.get_next_key()
-            self._current_key_obj = key_obj
-            self._client = genai.Client(api_key=raw_key)
-            logger.info(f"GeminiService initialized with model: {self._model_name}")
-        except ImportError:
-            raise GeminiConfigurationError("google-genai not installed. Run: pip install google-genai")
-        except GeminiConfigurationError:
-            logger.warning("GeminiService: No keys available for initialization.")
-        except Exception as e:
-            raise GeminiConfigurationError(f"Failed to initialize Gemini client: {e}")
+            from openai import OpenAI
 
-    def _reinitialize_with_next_key(self, error_msg: str = '', is_rate_limit: bool = False) -> None:
-        """إعادة تهيئة العميل بالمفتاح التالي."""
-        self._key_manager.rotate_after_error(self._current_key_obj, error_msg, is_rate_limit)
-        try:
-            from google import genai
-            key_obj, raw_key = self._key_manager.get_next_key()
-            self._current_key_obj = key_obj
-            self._client = genai.Client(api_key=raw_key)
-            logger.info("GeminiService: Reinitialized with next API key")
+            api_key = self._key_manager.get_api_key()
+            self._client = OpenAI(
+                api_key=api_key,
+                base_url=MANUS_BASE_URL,
+            )
+            logger.info(f"GeminiService initialized with Manus Proxy | model: {self._model_name} | base_url: {MANUS_BASE_URL}")
+        except ImportError:
+            raise GeminiConfigurationError("openai not installed. Run: pip install openai")
+        except GeminiConfigurationError:
+            logger.warning("GeminiService: No API key available for initialization.")
         except Exception as e:
-            logger.error(f"GeminiService: Failed to reinitialize: {e}")
+            raise GeminiConfigurationError(f"Failed to initialize OpenAI client: {e}")
 
     @property
     def is_available(self) -> bool:
@@ -754,11 +684,11 @@ class GeminiService:
         return self._storage
 
     def _generate_content(self, prompt: str, max_tokens: int = None) -> str:
-        """توليد محتوى مع Hydra Round-Robin retry."""
+        """توليد محتوى عبر Manus API Proxy (OpenAI-compatible)."""
         self._check_service_enabled()
 
         if not self.is_available:
-            raise GeminiConfigurationError("Gemini client not initialized")
+            raise GeminiConfigurationError("AI client not initialized. Check MANUS_API_KEY.")
 
         # Get config from DB
         config = _get_ai_config()
@@ -767,73 +697,64 @@ class GeminiService:
         temperature = config.temperature if config else FALLBACK_TEMPERATURE
 
         last_exception = None
-        max_attempts = min(self._key_manager.total_keys, MAX_RETRIES) if self._key_manager.total_keys > 0 else MAX_RETRIES
 
-        for attempt in range(max(max_attempts, 1)):
+        for attempt in range(MAX_RETRIES):
             try:
-                from google import genai
-                from google.genai import types
-
                 start_ms = int(time.time() * 1000)
 
-                response = self._client.models.generate_content(
+                # Use OpenAI chat.completions.create format
+                response = self._client.chat.completions.create(
                     model=self._model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        max_output_tokens=max_tokens,
-                        temperature=temperature,
-                    )
+                    messages=[
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
                 )
 
                 latency_ms = int(time.time() * 1000) - start_ms
 
-                if response.text:
-                    # Mark success on the current key
-                    if self._current_key_obj:
-                        self._current_key_obj.mark_success(latency_ms)
-                    return response.text.strip()
+                # Extract response text
+                if response.choices and response.choices[0].message.content:
+                    result_text = response.choices[0].message.content.strip()
+                    logger.info(f"AI response received in {latency_ms}ms (model={self._model_name})")
+                    return result_text
                 else:
-                    raise GeminiAPIError("Empty response from Gemini")
+                    raise GeminiAPIError("Empty response from AI API")
 
             except GeminiServiceDisabledError:
+                raise
+            except GeminiError:
                 raise
             except Exception as e:
                 last_exception = e
                 error_str = str(e).lower()
 
                 is_rate_limit = any(kw in error_str for kw in [
-                    "rate", "quota", "429", "resource_exhausted"
+                    "rate", "quota", "429", "resource_exhausted", "too many requests"
                 ])
 
                 if is_rate_limit:
-                    logger.warning(f"Rate limit on attempt {attempt + 1}, rotating key...")
-                    self._reinitialize_with_next_key(str(e), is_rate_limit=True)
-
-                    retry_match = re.search(r'retry in (\d+)', error_str)
-                    if retry_match:
-                        wait_time = min(int(retry_match.group(1)), 60)
-                    else:
-                        wait_time = min(5.0 * (2 ** attempt), 30)
-
+                    logger.warning(f"Rate limit on attempt {attempt + 1}, waiting...")
+                    wait_time = min(5.0 * (2 ** attempt), 30)
                     time.sleep(wait_time)
                     continue
-                elif "invalid" in error_str and "key" in error_str:
-                    logger.error(f"Invalid API key, rotating...")
-                    self._reinitialize_with_next_key(str(e), is_rate_limit=False)
-                    continue
+                elif "invalid" in error_str and ("key" in error_str or "auth" in error_str):
+                    logger.error(f"Invalid API key or auth error: {e}")
+                    raise GeminiConfigurationError(f"Authentication error: {e}")
                 else:
-                    if attempt < max_attempts - 1:
-                        time.sleep(1.0 * (2 ** attempt))
-                        self._reinitialize_with_next_key(str(e), is_rate_limit=False)
+                    if attempt < MAX_RETRIES - 1:
+                        wait_time = min(2.0 * (2 ** attempt), 15)
+                        logger.warning(f"API error on attempt {attempt + 1}, retrying in {wait_time}s: {e}")
+                        time.sleep(wait_time)
                         continue
-                    raise GeminiAPIError(f"Gemini API error: {e}")
+                    raise GeminiAPIError(f"AI API error: {e}")
 
         if last_exception and any(kw in str(last_exception).lower() for kw in ["quota", "429", "rate"]):
             raise GeminiRateLimitError(
-                "⏳ تم تجاوز الحد المسموح لـ API. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى، "
-                "أو تواصل مع المسؤول لإضافة مفاتيح API إضافية."
+                "\u23f3 \u062a\u0645 \u062a\u062c\u0627\u0648\u0632 \u0627\u0644\u062d\u062f \u0627\u0644\u0645\u0633\u0645\u0648\u062d \u0644\u0640 API. \u064a\u0631\u062c\u0649 \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631 \u062f\u0642\u064a\u0642\u0629 \u062b\u0645 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649."
             )
-        raise last_exception or GeminiAPIError("All API keys exhausted")
+        raise last_exception or GeminiAPIError("AI API request failed after all retries")
 
     # ========== Public Methods ==========
 
@@ -864,7 +785,7 @@ class GeminiService:
             try:
                 summary = self._generate_single_summary(
                     chunk, max_length=200,
-                    user_notes=f"هذا الجزء {i+1} من {len(chunks)}. {user_notes}"
+                    user_notes=f"\u0647\u0630\u0627 \u0627\u0644\u062c\u0632\u0621 {i+1} \u0645\u0646 {len(chunks)}. {user_notes}"
                 )
                 chunk_summaries.append(summary)
             except GeminiError:
@@ -876,7 +797,7 @@ class GeminiService:
         combined = "\n\n".join(chunk_summaries)
         return self._generate_single_summary(
             combined, max_length,
-            user_notes=f"هذا ملخص مُجمّع من {len(chunks)} أجزاء. أعد صياغته كملخص متماسك واحد. {user_notes}"
+            user_notes=f"\u0647\u0630\u0627 \u0645\u0644\u062e\u0635 \u0645\u064f\u062c\u0645\u0651\u0639 \u0645\u0646 {len(chunks)} \u0623\u062c\u0632\u0627\u0621. \u0623\u0639\u062f \u0635\u064a\u0627\u063a\u062a\u0647 \u0643\u0645\u0644\u062e\u0635 \u0645\u062a\u0645\u0627\u0633\u0643 \u0648\u0627\u062d\u062f. {user_notes}"
         )
 
     def _generate_single_summary(self, text: str, max_length: int = 500, user_notes: str = "") -> str:
@@ -884,23 +805,23 @@ class GeminiService:
         config = _get_ai_config()
         input_limit = config.chunk_size if config else FALLBACK_CHUNK_SIZE
 
-        prompt = f"""ROLE: أنت مساعد أكاديمي خبير متخصص في تلخيص المحتوى التعليمي.
+        prompt = f"""ROLE: \u0623\u0646\u062a \u0645\u0633\u0627\u0639\u062f \u0623\u0643\u0627\u062f\u064a\u0645\u064a \u062e\u0628\u064a\u0631 \u0645\u062a\u062e\u0635\u0635 \u0641\u064a \u062a\u0644\u062e\u064a\u0635 \u0627\u0644\u0645\u062d\u062a\u0648\u0649 \u0627\u0644\u062a\u0639\u0644\u064a\u0645\u064a.
 
-TASK: تلخيص
-قم بتلخيص النص التالي بشكل مختصر ومفيد بصيغة Markdown. ركز على:
-- النقاط الرئيسية والمفاهيم الأساسية
-- المعلومات الأكثر أهمية
-- الحفاظ على الدقة العلمية
-- استخدام عناوين وقوائم لتنظيم المحتوى
+TASK: \u062a\u0644\u062e\u064a\u0635
+\u0642\u0645 \u0628\u062a\u0644\u062e\u064a\u0635 \u0627\u0644\u0646\u0635 \u0627\u0644\u062a\u0627\u0644\u064a \u0628\u0634\u0643\u0644 \u0645\u062e\u062a\u0635\u0631 \u0648\u0645\u0641\u064a\u062f \u0628\u0635\u064a\u063a\u0629 Markdown. \u0631\u0643\u0632 \u0639\u0644\u0649:
+- \u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629 \u0648\u0627\u0644\u0645\u0641\u0627\u0647\u064a\u0645 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629
+- \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062a \u0627\u0644\u0623\u0643\u062b\u0631 \u0623\u0647\u0645\u064a\u0629
+- \u0627\u0644\u062d\u0641\u0627\u0638 \u0639\u0644\u0649 \u0627\u0644\u062f\u0642\u0629 \u0627\u0644\u0639\u0644\u0645\u064a\u0629
+- \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0639\u0646\u0627\u0648\u064a\u0646 \u0648\u0642\u0648\u0627\u0626\u0645 \u0644\u062a\u0646\u0638\u064a\u0645 \u0627\u0644\u0645\u062d\u062a\u0648\u0649
 {notes_section}
 
-OUTPUT_FORMAT: Markdown (مع عناوين وقوائم وتنسيق واضح)
-LANGUAGE: Arabic (ما لم يُحدد خلاف ذلك)
+OUTPUT_FORMAT: Markdown (\u0645\u0639 \u0639\u0646\u0627\u0648\u064a\u0646 \u0648\u0642\u0648\u0627\u0626\u0645 \u0648\u062a\u0646\u0633\u064a\u0642 \u0648\u0627\u0636\u062d)
+LANGUAGE: Arabic (\u0645\u0627 \u0644\u0645 \u064a\u064f\u062d\u062f\u062f \u062e\u0644\u0627\u0641 \u0630\u0644\u0643)
 
 CONTEXT:
 {text[:input_limit]}
 
-التلخيص (بحد أقصى {max_length} كلمة، بصيغة Markdown):"""
+\u0627\u0644\u062a\u0644\u062e\u064a\u0635 (\u0628\u062d\u062f \u0623\u0642\u0635\u0649 {max_length} \u0643\u0644\u0645\u0629\u060c \u0628\u0635\u064a\u063a\u0629 Markdown):"""
 
         try:
             return self._generate_content(prompt, max_tokens=max_length * 3)
@@ -938,44 +859,44 @@ CONTEXT:
 
         parts = []
         if matrix.mcq_count > 0:
-            parts.append(f"- {matrix.mcq_count} سؤال اختيار من متعدد (mcq) - كل سؤال {matrix.mcq_score} درجة")
+            parts.append(f"- {matrix.mcq_count} \u0633\u0624\u0627\u0644 \u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0646 \u0645\u062a\u0639\u062f\u062f (mcq) - \u0643\u0644 \u0633\u0624\u0627\u0644 {matrix.mcq_score} \u062f\u0631\u062c\u0629")
         if matrix.true_false_count > 0:
-            parts.append(f"- {matrix.true_false_count} سؤال صح وخطأ (true_false) - كل سؤال {matrix.true_false_score} درجة")
+            parts.append(f"- {matrix.true_false_count} \u0633\u0624\u0627\u0644 \u0635\u062d \u0648\u062e\u0637\u0623 (true_false) - \u0643\u0644 \u0633\u0624\u0627\u0644 {matrix.true_false_score} \u062f\u0631\u062c\u0629")
         if matrix.short_answer_count > 0:
-            parts.append(f"- {matrix.short_answer_count} سؤال إجابة قصيرة (short_answer) - كل سؤال {matrix.short_answer_score} درجة")
+            parts.append(f"- {matrix.short_answer_count} \u0633\u0624\u0627\u0644 \u0625\u062c\u0627\u0628\u0629 \u0642\u0635\u064a\u0631\u0629 (short_answer) - \u0643\u0644 \u0633\u0624\u0627\u0644 {matrix.short_answer_score} \u062f\u0631\u062c\u0629")
 
         matrix_text = "\n".join(parts)
 
-        prompt = f"""ROLE: أنت مدرس جامعي خبير متخصص في إنشاء أسئلة اختبارية أكاديمية.
+        prompt = f"""ROLE: \u0623\u0646\u062a \u0645\u062f\u0631\u0633 \u062c\u0627\u0645\u0639\u064a \u062e\u0628\u064a\u0631 \u0645\u062a\u062e\u0635\u0635 \u0641\u064a \u0625\u0646\u0634\u0627\u0621 \u0623\u0633\u0626\u0644\u0629 \u0627\u062e\u062a\u0628\u0627\u0631\u064a\u0629 \u0623\u0643\u0627\u062f\u064a\u0645\u064a\u0629.
 
-TASK: توليد أسئلة اختبارية
+TASK: \u062a\u0648\u0644\u064a\u062f \u0623\u0633\u0626\u0644\u0629 \u0627\u062e\u062a\u0628\u0627\u0631\u064a\u0629
 CONFIG:
 {matrix_text}
 
-إجمالي: {matrix.total_questions} سؤال | الدرجة الكلية: {matrix.total_score}
+\u0625\u062c\u0645\u0627\u0644\u064a: {matrix.total_questions} \u0633\u0624\u0627\u0644 | \u0627\u0644\u062f\u0631\u062c\u0629 \u0627\u0644\u0643\u0644\u064a\u0629: {matrix.total_score}
 {notes_section}
 
-أرجع الإجابة بصيغة JSON فقط بدون أي نص إضافي، كمصفوفة:
+\u0623\u0631\u062c\u0639 \u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0628\u0635\u064a\u063a\u0629 JSON \u0641\u0642\u0637 \u0628\u062f\u0648\u0646 \u0623\u064a \u0646\u0635 \u0625\u0636\u0627\u0641\u064a\u060c \u0643\u0645\u0635\u0641\u0648\u0641\u0629:
 [
     {{
-        "type": "mcq" أو "true_false" أو "short_answer",
-        "question": "نص السؤال",
-        "options": ["خيار1", "خيار2", "خيار3", "خيار4"],
-        "answer": "الإجابة الصحيحة",
-        "explanation": "شرح مختصر",
-        "score": الدرجة_كرقم
+        "type": "mcq" \u0623\u0648 "true_false" \u0623\u0648 "short_answer",
+        "question": "\u0646\u0635 \u0627\u0644\u0633\u0624\u0627\u0644",
+        "options": ["\u062e\u064a\u0627\u06311", "\u062e\u064a\u0627\u06312", "\u062e\u064a\u0627\u06313", "\u062e\u064a\u0627\u06314"],
+        "answer": "\u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0627\u0644\u0635\u062d\u064a\u062d\u0629",
+        "explanation": "\u0634\u0631\u062d \u0645\u062e\u062a\u0635\u0631",
+        "score": \u0627\u0644\u062f\u0631\u062c\u0629_\u0643\u0631\u0642\u0645
     }}
 ]
 
-ملاحظات:
-- للأسئلة true_false: الخيارات ["صح", "خطأ"] فقط
-- للأسئلة short_answer: لا تضع options (اجعلها null)
-- تأكد أن الأسئلة متنوعة وتغطي أجزاء مختلفة من النص
+\u0645\u0644\u0627\u062d\u0638\u0627\u062a:
+- \u0644\u0644\u0623\u0633\u0626\u0644\u0629 true_false: \u0627\u0644\u062e\u064a\u0627\u0631\u0627\u062a ["\u0635\u062d", "\u062e\u0637\u0623"] \u0641\u0642\u0637
+- \u0644\u0644\u0623\u0633\u0626\u0644\u0629 short_answer: \u0644\u0627 \u062a\u0636\u0639 options (\u0627\u062c\u0639\u0644\u0647\u0627 null)
+- \u062a\u0623\u0643\u062f \u0623\u0646 \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0645\u062a\u0646\u0648\u0639\u0629 \u0648\u062a\u063a\u0637\u064a \u0623\u062c\u0632\u0627\u0621 \u0645\u062e\u062a\u0644\u0641\u0629 \u0645\u0646 \u0627\u0644\u0646\u0635
 
-النص:
+\u0627\u0644\u0646\u0635:
 {source_text[:input_limit]}
 
-الأسئلة (JSON فقط):"""
+\u0627\u0644\u0623\u0633\u0626\u0644\u0629 (JSON \u0641\u0642\u0637):"""
 
         try:
             result = self._generate_content(prompt, max_tokens=4000)
@@ -1023,9 +944,9 @@ CONFIG:
     def _fallback_questions(self, num_questions: int) -> List[Dict[str, Any]]:
         return [{
             'type': 'short_answer',
-            'question': 'ما هي الفكرة الرئيسية في هذا النص؟',
-            'answer': 'راجع النص للإجابة',
-            'explanation': 'سؤال تلقائي - خدمة AI غير متاحة حالياً',
+            'question': '\u0645\u0627 \u0647\u064a \u0627\u0644\u0641\u0643\u0631\u0629 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629 \u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u0646\u0635\u061f',
+            'answer': '\u0631\u0627\u062c\u0639 \u0627\u0644\u0646\u0635 \u0644\u0644\u0625\u062c\u0627\u0628\u0629',
+            'explanation': '\u0633\u0624\u0627\u0644 \u062a\u0644\u0642\u0627\u0626\u064a - \u062e\u062f\u0645\u0629 AI \u063a\u064a\u0631 \u0645\u062a\u0627\u062d\u0629 \u062d\u0627\u0644\u064a\u0627\u064b',
             'score': 1.0
         }]
 
@@ -1041,32 +962,32 @@ CONFIG:
 
         notes_section = f"\n\nUSER_INSTRUCTION: {user_notes}" if user_notes else ""
 
-        prompt = f"""ROLE: أنت مساعد أكاديمي خبير يجيب على الأسئلة بناءً على محتوى المستندات.
+        prompt = f"""ROLE: \u0623\u0646\u062a \u0645\u0633\u0627\u0639\u062f \u0623\u0643\u0627\u062f\u064a\u0645\u064a \u062e\u0628\u064a\u0631 \u064a\u062c\u064a\u0628 \u0639\u0644\u0649 \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0628\u0646\u0627\u0621\u064b \u0639\u0644\u0649 \u0645\u062d\u062a\u0648\u0649 \u0627\u0644\u0645\u0633\u062a\u0646\u062f\u0627\u062a.
 
-TASK: الإجابة على سؤال أكاديمي
-قواعد:
-1. أجب بناءً على المحتوى المقدم فقط
-2. إذا لم تجد الإجابة، قل ذلك بوضوح
-3. استخدم اللغة العربية الفصحى
-4. كن واضحاً ومفصلاً
-5. استخدم صيغة Markdown في الإجابة
+TASK: \u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0639\u0644\u0649 \u0633\u0624\u0627\u0644 \u0623\u0643\u0627\u062f\u064a\u0645\u064a
+\u0642\u0648\u0627\u0639\u062f:
+1. \u0623\u062c\u0628 \u0628\u0646\u0627\u0621\u064b \u0639\u0644\u0649 \u0627\u0644\u0645\u062d\u062a\u0648\u0649 \u0627\u0644\u0645\u0642\u062f\u0645 \u0641\u0642\u0637
+2. \u0625\u0630\u0627 \u0644\u0645 \u062a\u062c\u062f \u0627\u0644\u0625\u062c\u0627\u0628\u0629\u060c \u0642\u0644 \u0630\u0644\u0643 \u0628\u0648\u0636\u0648\u062d
+3. \u0627\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0644\u063a\u0629 \u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u0627\u0644\u0641\u0635\u062d\u0649
+4. \u0643\u0646 \u0648\u0627\u0636\u062d\u0627\u064b \u0648\u0645\u0641\u0635\u0644\u0627\u064b
+5. \u0627\u0633\u062a\u062e\u062f\u0645 \u0635\u064a\u063a\u0629 Markdown \u0641\u064a \u0627\u0644\u0625\u062c\u0627\u0628\u0629
 {notes_section}
 
 OUTPUT_FORMAT: Markdown
-LANGUAGE: Arabic (ما لم يُحدد خلاف ذلك)
+LANGUAGE: Arabic (\u0645\u0627 \u0644\u0645 \u064a\u064f\u062d\u062f\u062f \u062e\u0644\u0627\u0641 \u0630\u0644\u0643)
 
 CONTEXT:
 {context}
 
-السؤال: {question}
+\u0627\u0644\u0633\u0624\u0627\u0644: {question}
 
-الإجابة:"""
+\u0627\u0644\u0625\u062c\u0627\u0628\u0629:"""
 
         try:
             return self._generate_content(prompt, max_tokens=1000)
         except GeminiError as e:
             logger.error(f"Document Q&A failed: {e}")
-            return "عذراً، حدث خطأ أثناء معالجة سؤالك. يرجى المحاولة مرة أخرى."
+            return "\u0639\u0630\u0631\u0627\u064b\u060c \u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0645\u0639\u0627\u0644\u062c\u0629 \u0633\u0624\u0627\u0644\u0643. \u064a\u0631\u062c\u0649 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649."
 
     def _find_relevant_chunks(self, chunks: List[str], question: str) -> str:
         question_words = set(question.lower().split())
@@ -1083,7 +1004,7 @@ CONTEXT:
         """توليد ملخص وحفظه كملف .md."""
         text = self.extract_text_from_file(file_obj)
         if not text:
-            return AIResponse(success=False, error='لا يمكن استخراج النص من الملف')
+            return AIResponse(success=False, error='\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0627\u0644\u0646\u0635 \u0645\u0646 \u0627\u0644\u0645\u0644\u0641')
 
         try:
             summary = self.generate_summary(text, user_notes=user_notes)
@@ -1108,12 +1029,12 @@ CONTEXT:
         """توليد أسئلة وحفظها كملف .md."""
         text = self.extract_text_from_file(file_obj)
         if not text:
-            return AIResponse(success=False, error='لا يمكن استخراج النص من الملف')
+            return AIResponse(success=False, error='\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0627\u0644\u0646\u0635 \u0645\u0646 \u0627\u0644\u0645\u0644\u0641')
 
         try:
             questions = self.generate_questions_matrix(text, matrix, user_notes)
             if not questions:
-                return AIResponse(success=False, error='لم يتمكن AI من توليد أسئلة')
+                return AIResponse(success=False, error='\u0644\u0645 \u064a\u062a\u0645\u0643\u0646 AI \u0645\u0646 \u062a\u0648\u0644\u064a\u062f \u0623\u0633\u0626\u0644\u0629')
 
             md_path = self._storage.save_questions(
                 file_id=file_obj.id,
@@ -1133,12 +1054,17 @@ CONTEXT:
             return AIResponse(success=False, error=str(e))
 
     def test_connection(self) -> AIResponse:
-        """اختبار الاتصال."""
+        """اختبار الاتصال بـ Manus API Proxy."""
         try:
             start_ms = int(time.time() * 1000)
-            response = self._generate_content("قل: مرحباً، أنا جاهز!", max_tokens=50)
+            response = self._generate_content("\u0642\u0644: \u0645\u0631\u062d\u0628\u0627\u064b\u060c \u0623\u0646\u0627 \u062c\u0627\u0647\u0632!", max_tokens=50)
             latency = int(time.time() * 1000) - start_ms
-            return AIResponse(success=True, data={'response': response, 'latency_ms': latency})
+            return AIResponse(success=True, data={
+                'response': response,
+                'latency_ms': latency,
+                'model': self._model_name,
+                'base_url': MANUS_BASE_URL,
+            })
         except GeminiError as e:
             return AIResponse(success=False, error=str(e))
 
@@ -1179,7 +1105,7 @@ def generate_summary_async(self, file_id: int, user_notes: str = "") -> Dict[str
         return {'success': False, 'error': result.error}
 
     except LectureFile.DoesNotExist:
-        return {'success': False, 'error': 'الملف غير موجود'}
+        return {'success': False, 'error': '\u0627\u0644\u0645\u0644\u0641 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f'}
     except Exception as e:
         logger.error(f"Async summary generation failed: {e}")
         if CELERY_AVAILABLE and hasattr(self, 'retry'):
@@ -1201,7 +1127,7 @@ def generate_questions_async(
 
         text = service.extract_text_from_file(file_obj)
         if not text:
-            return {'success': False, 'error': 'لا يمكن استخراج النص'}
+            return {'success': False, 'error': '\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0627\u0644\u0646\u0635'}
 
         q_type = QuestionType(question_type) if question_type in [e.value for e in QuestionType] else QuestionType.MIXED
         questions = service.generate_questions(text, q_type, num_questions, user_notes)
@@ -1221,7 +1147,7 @@ def generate_questions_async(
         return {'success': True, 'question_ids': saved_ids, 'count': len(saved_ids)}
 
     except LectureFile.DoesNotExist:
-        return {'success': False, 'error': 'الملف غير موجود'}
+        return {'success': False, 'error': '\u0627\u0644\u0645\u0644\u0641 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f'}
     except Exception as e:
         logger.error(f"Async question generation failed: {e}")
         if CELERY_AVAILABLE and hasattr(self, 'retry'):

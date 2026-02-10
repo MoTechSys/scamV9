@@ -216,7 +216,7 @@ class APIKeyAdmin(admin.ModelAdmin):
 
     @admin.action(description='🔍 اختبار الاتصال للمفاتيح المحددة')
     def test_connection_action(self, request, queryset):
-        """Test connection for selected API keys."""
+        """Test connection for selected API keys via Manus Proxy."""
         results = []
         for key_obj in queryset:
             raw_key = key_obj.get_key()
@@ -225,36 +225,38 @@ class APIKeyAdmin(admin.ModelAdmin):
                 continue
 
             try:
-                from google import genai
-                from google.genai import types
+                from openai import OpenAI
+                import os
 
-                client = genai.Client(api_key=raw_key)
+                base_url = getattr(settings, 'MANUS_BASE_URL', None) or os.getenv('MANUS_BASE_URL', 'https://api.manus.im/api/llm-proxy/v1')
+                client = OpenAI(api_key=raw_key, base_url=base_url)
 
                 try:
                     config = AIConfiguration.get_config()
                     model_name = config.active_model
                 except Exception:
-                    model_name = 'gemini-2.0-flash'
+                    model_name = 'gpt-4.1-mini'
 
                 start_ms = int(time.time() * 1000)
-                response = client.models.generate_content(
+                response = client.chat.completions.create(
                     model=model_name,
-                    contents="Say: Hello, I'm ready!",
-                    config=types.GenerateContentConfig(max_output_tokens=20)
+                    messages=[{"role": "user", "content": "Say: Hello, I'm ready!"}],
+                    max_tokens=20,
                 )
                 latency_ms = int(time.time() * 1000) - start_ms
 
-                if response.text:
+                if response.choices and response.choices[0].message.content:
                     key_obj.mark_success(latency_ms)
+                    resp_text = response.choices[0].message.content[:50]
                     results.append(
-                        f'✅ {key_obj.label}: نجح ({latency_ms}ms) - "{response.text[:50]}"'
+                        f'✅ {key_obj.label}: نجح ({latency_ms}ms) - "{resp_text}"'
                     )
                 else:
                     key_obj.mark_error("Empty response")
                     results.append(f'⚠️ {key_obj.label}: استجابة فارغة')
 
             except ImportError:
-                results.append(f'❌ {key_obj.label}: google-genai غير مثبت')
+                results.append(f'❌ {key_obj.label}: openai غير مثبت')
             except Exception as e:
                 error_str = str(e)
                 is_rate_limit = any(kw in error_str.lower() for kw in ['rate', 'quota', '429'])
@@ -375,7 +377,7 @@ class APIKeyAdmin(admin.ModelAdmin):
         )
 
     def test_single_key_view(self, request, key_id):
-        """AJAX endpoint: Test a single key."""
+        """AJAX endpoint: Test a single key via Manus Proxy."""
         try:
             key_obj = APIKey.objects.get(pk=key_id)
         except APIKey.DoesNotExist:
@@ -386,24 +388,32 @@ class APIKeyAdmin(admin.ModelAdmin):
             return JsonResponse({'success': False, 'error': 'فشل فك التشفير'})
 
         try:
-            from google import genai
-            from google.genai import types
+            from openai import OpenAI
+            import os
 
-            client = genai.Client(api_key=raw_key)
+            base_url = getattr(settings, 'MANUS_BASE_URL', None) or os.getenv('MANUS_BASE_URL', 'https://api.manus.im/api/llm-proxy/v1')
+            client = OpenAI(api_key=raw_key, base_url=base_url)
+
+            try:
+                config = AIConfiguration.get_config()
+                model_name = config.active_model
+            except Exception:
+                model_name = 'gpt-4.1-mini'
+
             start_ms = int(time.time() * 1000)
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents="Say: Hello!",
-                config=types.GenerateContentConfig(max_output_tokens=10)
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": "Say: Hello!"}],
+                max_tokens=10,
             )
             latency_ms = int(time.time() * 1000) - start_ms
 
-            if response.text:
+            if response.choices and response.choices[0].message.content:
                 key_obj.mark_success(latency_ms)
                 return JsonResponse({
                     'success': True,
                     'latency_ms': latency_ms,
-                    'response': response.text[:50]
+                    'response': response.choices[0].message.content[:50]
                 })
 
             key_obj.mark_error("Empty response")

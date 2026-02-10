@@ -25,8 +25,8 @@
                 <div class="mb-2"><strong>النوع:</strong> {{ file.file_extension }}</div>
                 <hr>
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <i class="bi bi-lightning-charge text-warning"></i>
-                    <span>طلبات متبقية: <strong class="text-primary">{{ remaining_requests }}</strong></span>
+                    <i class="bi bi-infinity text-success"></i>
+                    <span>الاستخدام: <strong class="text-success">غير محدود</strong></span>
                 </div>
                 {% if not existing_summary %}
                 <form method="post" id="summarizeForm">
