@@ -11,7 +11,31 @@
                     {% for field in form %}
                     <div class="mb-3">
                         <label class="form-label fw-semibold">{{ field.label }}</label>
+
+                        {% if field.name == 'content_type' %}
+                        {# Special rendering for radio buttons to prevent overlapping #}
+                        <div class="content-type-options">
+                            {% for choice in field %}
+                            <div class="content-type-option">
+                                <label class="d-flex align-items-center gap-3 p-3 rounded-3 border cursor-pointer" style="cursor:pointer; transition: all 0.2s;">
+                                    {{ choice.tag }}
+                                    <span class="fw-medium">{{ choice.choice_label }}</span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% elif field.name == 'is_visible' %}
+                        {# Checkbox with proper alignment #}
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-3 border">
+                            {{ field }}
+                            <label for="{{ field.id_for_label }}" class="form-check-label fw-medium" style="cursor:pointer;">
+                                للتحكم في ظهور الملف للطلاب
+                            </label>
+                        </div>
+                        {% else %}
                         {{ field }}
+                        {% endif %}
+
                         {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
                         {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                     </div>
@@ -28,4 +52,31 @@
         </div>
     </div>
 </div>
+
+<style>
+.content-type-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.content-type-option label {
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-card);
+}
+.content-type-option label:hover {
+    border-color: var(--primary-light) !important;
+    background: var(--primary-10);
+}
+.content-type-option input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin: 0;
+    accent-color: var(--primary);
+}
+.content-type-option input[type="radio"]:checked + span {
+    color: var(--primary);
+    font-weight: 600;
+}
+</style>
 {% endblock %}

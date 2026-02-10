@@ -1158,3 +1158,380 @@ body.sidebar-collapsed .main-wrapper {
         padding: 28px 32px;
     }
 }
+
+/* ==========================================================
+  11. FORM FIX: Radio Buttons & Checkbox Overlapping
+   ========================================================== */
+
+/* Fix Django RadioSelect rendering - prevent overlapping */
+.form-check-input[type="radio"],
+.form-check-input[type="checkbox"] {
+    flex-shrink: 0;
+}
+
+/* Radio group container fix */
+ul[id*="id_content_type"],
+ul[id*="id_"] > li,
+.radio-group-fix {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+ul[id*="id_content_type"] li,
+ul[id*="id_"] > li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+ul[id*="id_content_type"] li:hover,
+ul[id*="id_"] > li:hover {
+    border-color: var(--primary-light);
+    background: var(--primary-10);
+}
+
+ul[id*="id_content_type"] li label,
+ul[id*="id_"] > li label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    flex: 1;
+    line-height: 1.5;
+}
+
+/* Checkbox with label alignment */
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    min-height: auto;
+}
+
+.form-check .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+.form-check .form-check-label {
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ==========================================================
+  12. SCROLLABLE CONTAINERS for Long Lists
+   ========================================================== */
+
+/* Scrollable list container */
+.scrollable-list {
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.scrollable-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.scrollable-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* Sticky table headers inside scrollable containers */
+.scrollable-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.scrollable-table-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+.scrollable-table-container::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.scrollable-table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-card);
+    box-shadow: 0 1px 0 var(--border-color);
+}
+
+/* ==========================================================
+  13. RESPONSIVE TABS - Horizontal Scroll on Mobile
+   ========================================================== */
+
+/* Universal tabs fix for mobile */
+.notif-tabs,
+.settings-tabs,
+.report-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+}
+
+.notif-tabs::-webkit-scrollbar,
+.settings-tabs::-webkit-scrollbar,
+.report-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.notif-tab,
+.settings-tab,
+.report-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: auto;
+}
+
+/* On mobile, show as horizontal scrolling row instead of column */
+@media (max-width: 767.98px) {
+    .notif-tabs,
+    .settings-tabs,
+    .report-tabs {
+        flex-direction: row !important;
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .notif-tab,
+    .settings-tab,
+    .report-tab {
+        flex: 0 0 auto;
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+
+    /* Tab icon-only on very small screens */
+    .notif-tab span,
+    .settings-tab span,
+    .report-tab span {
+        display: none;
+    }
+
+    .notif-tab i,
+    .settings-tab i,
+    .report-tab i {
+        font-size: 1.1rem;
+    }
+
+    /* Show text only on active tab */
+    .notif-tab.active span,
+    .settings-tab.active span,
+    .report-tab.active span {
+        display: inline;
+    }
+}
+
+/* ==========================================================
+  14. NOTIFICATION ACTION BUTTONS - Dropdown Menu
+   ========================================================== */
+
+/* Action buttons in notification items - horizontal on desktop */
+.notif-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    align-items: flex-start;
+}
+
+/* Mobile: make actions a compact dropdown-like row */
+@media (max-width: 767.98px) {
+    .notif-actions {
+        flex-direction: row !important;
+        opacity: 1 !important;
+        gap: 4px;
+    }
+
+    .notif-actions .action-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+    }
+}
+
+/* ==========================================================
+  15. MOBILE CARD VIEW for Tables
+   ========================================================== */
+
+/* Table to Card view on mobile */
+@media (max-width: 767.98px) {
+    .table-to-cards thead {
+        display: none;
+    }
+
+    .table-to-cards tbody tr {
+        display: block;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 12px;
+        margin-bottom: 8px;
+        background: var(--bg-card);
+        box-shadow: var(--shadow-xs);
+    }
+
+    .table-to-cards tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0 !important;
+        border: none !important;
+        font-size: 0.85rem;
+    }
+
+    .table-to-cards tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+        margin-left: 8px;
+    }
+}
+
+/* ==========================================================
+  16. FILTER PILLS Responsive Fix
+   ========================================================== */
+.filter-pills {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+}
+
+.filter-pills::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-pill {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* ==========================================================
+  17. PROFILE PAGE Activities Scroll Fix
+   ========================================================== */
+.activities-scroll {
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.activities-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.activities-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+/* ==========================================================
+  18. BOOTSTRAP OVERRIDES for RTL Consistency
+   ========================================================== */
+:root {
+    --bs-body-bg: var(--bg-body);
+    --bs-body-color: var(--text-primary);
+    --bs-border-color: var(--border-color);
+}
+
+/* Form switch better alignment */
+.form-check.form-switch {
+    padding-right: 2.5em;
+    padding-left: 0;
+}
+
+.form-check.form-switch .form-check-input {
+    margin-right: -2.5em;
+    margin-left: 0;
+}
+
+/* ==========================================================
+  19. TABLE RESPONSIVE IMPROVEMENTS
+   ========================================================== */
+
+/* Horizontal scroll indicator */
+.table-responsive {
+    position: relative;
+}
+
+.table-responsive::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 20px;
+    background: linear-gradient(to left, transparent, rgba(0,0,0,0.03));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.table-responsive.has-scroll::after {
+    opacity: 1;
+}
+
+/* ==========================================================
+  20. GLASSMORPHISM MODALS & ENHANCED COMPONENTS
+   ========================================================== */
+
+/* Modal glassmorphism */
+.modal-backdrop.show {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Card hover effect - subtle lift */
+.card-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Load More button */
+.load-more-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.load-more-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-10);
+}

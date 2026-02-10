@@ -63,14 +63,15 @@
             </div>
             <div class="card-body p-0">
                 {% if my_courses %}
-                <div class="table-responsive">
+                {# Desktop: Table View #}
+                <div class="d-none d-md-block scrollable-table-container">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
                                 <th>المقرر</th>
                                 <th>المستوى</th>
                                 <th>الملفات</th>
-                                <th class="d-none d-md-table-cell">الطلاب</th>
+                                <th>الطلاب</th>
                                 <th>إجراءات</th>
                             </tr>
                         </thead>
@@ -83,13 +84,13 @@
                             </td>
                             <td><span class="badge bg-light text-dark">{{ course.level }}</span></td>
                             <td>{{ course.files.count }}</td>
-                            <td class="d-none d-md-table-cell">-</td>
+                            <td>-</td>
                             <td>
                                 <div class="d-flex gap-1">
                                     <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-sm btn-outline-primary" title="عرض">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{% url 'instructor:student_roster' course.pk %}" class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex" title="الطلاب">
+                                    <a href="{% url 'instructor:student_roster' course.pk %}" class="btn btn-sm btn-outline-secondary" title="الطلاب">
                                         <i class="bi bi-people"></i>
                                     </a>
                                 </div>
@@ -98,6 +99,27 @@
                         {% endfor %}
                         </tbody>
                     </table>
+                </div>
+                {# Mobile: Card View #}
+                <div class="d-block d-md-none p-2 scrollable-list">
+                    {% for course in my_courses %}
+                    <div class="d-flex align-items-center gap-3 p-3 border-bottom">
+                        <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px;height:44px;border-radius:12px;background:var(--primary-10);color:var(--primary);">
+                            <i class="bi bi-book fs-5"></i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-bold text-truncate" style="font-size:0.9rem;">{{ course.course_code }}</div>
+                            <small class="text-muted text-truncate d-block">{{ course.course_name|truncatechars:28 }}</small>
+                            <div class="d-flex gap-2 mt-1">
+                                <span class="badge bg-light text-dark" style="font-size:0.65rem;">{{ course.level }}</span>
+                                <span class="badge bg-primary-subtle text-primary" style="font-size:0.65rem;">{{ course.files.count }} ملف</span>
+                            </div>
+                        </div>
+                        <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-sm btn-outline-primary flex-shrink-0" style="width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </div>
+                    {% endfor %}
                 </div>
                 {% else %}
                 <div class="empty-state">

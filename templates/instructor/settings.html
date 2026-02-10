@@ -48,8 +48,24 @@
     color: #fff;
 }
 @media (max-width: 767.98px) {
-    .settings-tabs { flex-direction: column; gap: 2px; }
-    .settings-tab { padding: 10px 12px; font-size: 0.85rem; }
+    .settings-tabs { 
+        flex-direction: row !important; 
+        gap: 4px; 
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
+    }
+    .settings-tabs::-webkit-scrollbar { display: none; }
+    .settings-tab { 
+        padding: 10px 14px; 
+        font-size: 0.8rem; 
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+    .settings-tab span { display: none; }
+    .settings-tab i { font-size: 1.1rem; }
+    .settings-tab.active span { display: inline; }
 }
 {% endblock %}
 

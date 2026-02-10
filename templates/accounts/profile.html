@@ -79,15 +79,19 @@
         <div class="card mt-3">
             <div class="card-body">
                 <h6 class="fw-bold mb-3"><i class="bi bi-clock-history me-2"></i>آخر النشاطات</h6>
-                {% for activity in recent_activities %}
-                <div class="d-flex gap-2 align-items-start py-2 {% if not forloop.last %}border-bottom{% endif %}">
-                    <i class="bi {% if activity.activity_type == 'login' %}bi-box-arrow-in-right text-success{% elif activity.activity_type == 'password_change' %}bi-key text-warning{% else %}bi-person text-primary{% endif %}" style="font-size:1rem;margin-top:2px;"></i>
-                    <div>
-                        <div class="small">{{ activity.description }}</div>
-                        <small class="text-muted">{{ activity.created_at|timesince }} مضت</small>
+                <div class="activities-scroll">
+                    {% for activity in recent_activities %}
+                    {% if activity.description %}
+                    <div class="d-flex gap-2 align-items-start py-2 {% if not forloop.last %}border-bottom{% endif %}">
+                        <i class="bi {% if activity.activity_type == 'login' %}bi-box-arrow-in-right text-success{% elif activity.activity_type == 'password_change' %}bi-key text-warning{% else %}bi-person text-primary{% endif %}" style="font-size:1rem;margin-top:2px;flex-shrink:0;"></i>
+                        <div class="min-w-0">
+                            <div class="small text-truncate">{{ activity.description }}</div>
+                            <small class="text-muted">{{ activity.created_at|timesince }} مضت</small>
+                        </div>
                     </div>
+                    {% endif %}
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
         </div>
         {% endif %}
