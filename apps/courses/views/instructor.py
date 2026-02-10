@@ -20,7 +20,7 @@ from ..models import Course, LectureFile
 from ..forms import LectureFileForm
 from apps.accounts.views import InstructorRequiredMixin
 from apps.accounts.models import User, UserActivity
-from apps.notifications.models import NotificationManager
+from apps.notifications.services import NotificationManager
 from apps.core.models import AuditLog
 
 # استيراد خدمات الذكاء الاصطناعي (تأكد من وجود Celery أو استدعاء الدالة مباشرة)

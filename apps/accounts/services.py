@@ -129,7 +129,7 @@ class UserImportService:
         from .models import Role, Major, Level, User
         
         if self._roles_cache is None:
-            self._roles_cache = {r.role_name: r for r in Role.objects.all()}
+            self._roles_cache = {r.code: r for r in Role.objects.all()}
         if self._majors_cache is None:
             self._majors_cache = {m.major_name: m for m in Major.objects.all()}
         if self._levels_cache is None:
@@ -163,7 +163,7 @@ class UserImportService:
             return None, f'السطر {row_num}: رقم الهوية {id_card_number} موجود مسبقاً'
         
         # الحصول على البيانات المرجعية
-        role_name = row.get('role', 'Student').strip()
+        role_name = row.get('role', 'student').strip()
         role = self._roles_cache.get(role_name)
         if not role:
             return None, f'السطر {row_num}: الدور "{role_name}" غير موجود'
@@ -384,7 +384,7 @@ class StudentPromotionService:
         
         # بناء الاستعلام الأساسي
         students = User.objects.filter(
-            role__role_name='Student',
+            role__code='student',
             level=from_level,
             account_status='active'
         )
