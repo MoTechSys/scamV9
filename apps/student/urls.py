@@ -16,7 +16,7 @@ urlpatterns = [
     # Settings
     path('settings/', views.StudentSettingsView.as_view(), name='settings'),
 
-    # Reports & Statistics
+    # Reports
     path('reports/', views.StudentReportsView.as_view(), name='reports'),
 
     # Multi-Context AI Center

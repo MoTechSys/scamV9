@@ -3,138 +3,200 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{{ file.title }} - غرفة الدراسة</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Marked.js for Markdown rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Markdown rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown-dark.min.css">
 
     <style>
-        * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Arabic', 'Noto Sans', sans-serif; }
-        body { background: #0f172a; color: #e2e8f0; margin: 0; height: 100vh; overflow: hidden; }
+        :root {
+            --sr-bg: #0f172a;
+            --sr-surface: #1e293b;
+            --sr-border: #334155;
+            --sr-text: #e2e8f0;
+            --sr-muted: #94a3b8;
+            --sr-accent: #6366f1;
+            --sr-accent-dark: #4f46e5;
+            --sr-radius: 12px;
+        }
+        * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif; margin: 0; box-sizing: border-box; }
+        body { background: var(--sr-bg); color: var(--sr-text); height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 
+        /* === Toolbar === */
         .study-toolbar {
-            height: 50px; background: #1e293b; border-bottom: 1px solid #334155;
+            height: 52px; background: var(--sr-surface); border-bottom: 1px solid var(--sr-border);
             display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
+            flex-shrink: 0; gap: 8px;
         }
-        .study-toolbar a, .study-toolbar button { color: #94a3b8; text-decoration: none; }
-        .study-toolbar a:hover, .study-toolbar button:hover { color: #fff; }
+        .study-toolbar a, .study-toolbar button { color: var(--sr-muted); text-decoration: none; background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; transition: all 0.15s; }
+        .study-toolbar a:hover, .study-toolbar button:hover { color: #fff; background: rgba(255,255,255,0.08); }
+        .toolbar-title { font-weight: 600; color: #fff; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+        .toolbar-meta { color: var(--sr-muted); font-size: 0.75rem; }
+        .progress-mini { height: 4px; background: var(--sr-border); border-radius: 2px; width: 80px; }
+        .progress-mini .bar { height: 100%; background: var(--sr-accent); border-radius: 2px; transition: width 0.5s; }
+        .toolbar-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; padding: 6px 10px !important; border-radius: 8px !important; }
 
-        .study-container { display: flex; height: calc(100vh - 50px); }
+        /* === Split Container === */
+        .study-container { display: flex; flex: 1; overflow: hidden; }
 
-        /* Content Viewer */
+        /* === Content Viewer === */
         .content-viewer {
-            flex: 7; background: #1e293b; display: flex; flex-direction: column;
-            border-left: 1px solid #334155; overflow: hidden;
+            flex: 1; background: var(--sr-bg); display: flex; flex-direction: column;
+            overflow: hidden; position: relative;
         }
-        .content-viewer iframe, .content-viewer video {
-            flex: 1; width: 100%; border: none;
-        }
-        .content-viewer video { background: #000; }
-        .content-viewer .img-viewer {
-            flex: 1; display: flex; align-items: center; justify-content: center;
-            overflow: auto; padding: 16px; background: #0f172a;
-        }
-        .content-viewer .img-viewer img {
-            max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in;
-            border-radius: 8px; transition: transform 0.3s;
-        }
-        .content-viewer .img-viewer img.zoomed { transform: scale(2); cursor: zoom-out; }
-        .md-viewer { overflow-y: auto; padding: 24px; color: #e2e8f0; line-height: 1.8; flex: 1; }
-        .md-viewer h1, .md-viewer h2, .md-viewer h3 { color: #818cf8; }
+        .content-viewer iframe, .content-viewer video { flex: 1; width: 100%; border: none; background: #000; }
+        .content-viewer .file-preview { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center; }
+        .content-viewer .file-preview i { font-size: 4rem; opacity: 0.3; margin-bottom: 16px; }
+        .content-viewer .file-preview h5 { color: #fff; margin-bottom: 8px; }
+        .content-viewer .file-preview .btn { margin-top: 16px; }
 
-        /* AI Panel - Full Chat Experience */
+        /* Markdown viewer */
+        .md-viewer { flex: 1; overflow-y: auto; padding: 24px; }
+        .md-viewer .markdown-body { background: transparent; color: var(--sr-text); }
+        .md-viewer .markdown-body h1, .md-viewer .markdown-body h2, .md-viewer .markdown-body h3 { color: #818cf8; border-color: var(--sr-border); }
+
+        /* Image viewer */
+        .image-viewer { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; background: #000; }
+        .image-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+
+        /* === AI Panel Toggle Button (mobile) === */
+        .ai-toggle-btn {
+            display: none; position: fixed; bottom: 20px; left: 20px; z-index: 100;
+            width: 56px; height: 56px; border-radius: 50%; background: var(--sr-accent);
+            color: #fff; border: none; box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+            font-size: 1.4rem; cursor: pointer; transition: all 0.2s;
+        }
+        .ai-toggle-btn:active { transform: scale(0.9); }
+        .ai-toggle-btn .badge { position: absolute; top: -4px; right: -4px; font-size: 0.6rem; }
+
+        /* === AI Chat Panel === */
         .ai-panel {
-            flex: 3; background: #1e293b; display: flex; flex-direction: column;
-            min-width: 300px; max-width: 450px;
+            width: 380px; min-width: 320px; background: var(--sr-surface); display: flex;
+            flex-direction: column; border-right: 1px solid var(--sr-border); transition: all 0.3s;
         }
+
+        /* Panel Header */
         .ai-panel-header {
-            padding: 12px 16px; border-bottom: 1px solid #334155;
-            display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+            padding: 12px 16px; border-bottom: 1px solid var(--sr-border);
+            display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
         }
-        .ai-panel-header .btn { font-size: 0.75rem; padding: 4px 10px; }
+        .ai-panel-title { display: flex; justify-content: space-between; align-items: center; }
+        .ai-panel-title h6 { margin: 0; font-size: 0.9rem; font-weight: 700; color: #fff; }
+        .remaining-badge { font-size: 0.7rem; color: var(--sr-accent); padding: 4px 10px; background: rgba(99,102,241,0.15); border-radius: 20px; font-weight: 600; }
 
-        .chat-area {
-            flex: 1; overflow-y: auto; padding: 16px;
-            display: flex; flex-direction: column; gap: 12px;
+        /* Quick Actions */
+        .quick-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .quick-action-btn {
+            font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--sr-border);
+            background: transparent; color: var(--sr-muted); cursor: pointer; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
         }
-        .chat-msg { max-width: 95%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; word-wrap: break-word; }
-        .chat-msg.user { background: #4f46e5; color: #fff; align-self: flex-end; border-bottom-left-radius: 4px; }
-        .chat-msg.bot { background: #334155; color: #e2e8f0; align-self: flex-start; border-bottom-right-radius: 4px; }
-        .chat-msg .chat-time { font-size: 0.65rem; opacity: 0.6; margin-top: 4px; }
-        /* Markdown inside bot messages */
-        .chat-msg.bot h1,.chat-msg.bot h2,.chat-msg.bot h3,.chat-msg.bot h4 { color: #818cf8; margin-top: 0.5em; font-size: 1.1em; }
-        .chat-msg.bot ul,.chat-msg.bot ol { padding-right: 1.2em; margin: 0.5em 0; }
-        .chat-msg.bot code { background: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
-        .chat-msg.bot pre { background: #0f172a; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 0.5em 0; }
+        .quick-action-btn:hover { background: var(--sr-accent); color: #fff; border-color: var(--sr-accent); }
+
+        /* Chat Area */
+        .chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+        .chat-area::-webkit-scrollbar { width: 4px; }
+        .chat-area::-webkit-scrollbar-thumb { background: var(--sr-border); border-radius: 2px; }
+
+        /* Chat Messages */
+        .chat-msg { max-width: 90%; padding: 12px 16px; border-radius: 16px; font-size: 0.88rem; line-height: 1.7; word-break: break-word; animation: msgIn 0.25s ease; }
+        .chat-msg.user { background: var(--sr-accent); color: #fff; align-self: flex-end; border-bottom-left-radius: 4px; }
+        .chat-msg.bot { background: rgba(255,255,255,0.06); color: var(--sr-text); align-self: flex-start; border-bottom-right-radius: 4px; border: 1px solid var(--sr-border); }
+        .chat-msg .chat-time { font-size: 0.6rem; opacity: 0.5; margin-top: 6px; display: block; }
+
+        /* Markdown in bot messages */
+        .chat-msg.bot h1, .chat-msg.bot h2, .chat-msg.bot h3, .chat-msg.bot h4 { color: #818cf8; margin-top: 12px; margin-bottom: 6px; font-size: 1rem; }
+        .chat-msg.bot ul, .chat-msg.bot ol { padding-right: 20px; margin: 8px 0; }
+        .chat-msg.bot li { margin-bottom: 4px; }
+        .chat-msg.bot code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-size: 0.82rem; }
+        .chat-msg.bot pre { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
         .chat-msg.bot pre code { background: none; padding: 0; }
-        .chat-msg.bot table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
-        .chat-msg.bot th, .chat-msg.bot td { border: 1px solid #475569; padding: 6px 10px; text-align: right; }
-        .chat-msg.bot th { background: #0f172a; }
-        .chat-msg.bot blockquote { border-right: 3px solid #818cf8; padding-right: 12px; margin: 0.5em 0; opacity: 0.9; }
         .chat-msg.bot strong { color: #a5b4fc; }
+        .chat-msg.bot table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.82rem; }
+        .chat-msg.bot th, .chat-msg.bot td { border: 1px solid var(--sr-border); padding: 6px 8px; }
+        .chat-msg.bot th { background: rgba(99,102,241,0.15); }
 
-        .chat-input-area {
-            padding: 12px; border-top: 1px solid #334155;
-            display: flex; gap: 8px;
+        @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Welcome message */
+        .chat-welcome { text-align: center; padding: 24px 16px; color: var(--sr-muted); }
+        .chat-welcome i { font-size: 2.5rem; opacity: 0.3; display: block; margin-bottom: 12px; }
+        .chat-welcome p { font-size: 0.82rem; margin: 4px 0; }
+
+        /* Loading */
+        .typing-indicator { display: flex; gap: 4px; padding: 12px 16px; align-self: flex-start; }
+        .typing-indicator span { width: 8px; height: 8px; background: var(--sr-muted); border-radius: 50%; animation: typingDot 1.2s infinite; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.3; } 30% { transform: translateY(-6px); opacity: 1; } }
+
+        /* Chat Input */
+        .chat-input-area { padding: 12px; border-top: 1px solid var(--sr-border); flex-shrink: 0; }
+        .chat-input-wrapper { display: flex; gap: 8px; align-items: flex-end; }
+        .chat-input-wrapper textarea {
+            flex: 1; background: var(--sr-bg); border: 1px solid var(--sr-border); color: var(--sr-text);
+            border-radius: 12px; padding: 10px 14px; font-size: 0.88rem; resize: none;
+            min-height: 44px; max-height: 120px; line-height: 1.5; overflow-y: auto;
         }
-        .chat-input-area input {
-            flex: 1; background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
-            border-radius: 8px; padding: 8px 14px; font-size: 0.9rem;
+        .chat-input-wrapper textarea:focus { outline: none; border-color: var(--sr-accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+        .chat-input-wrapper textarea::placeholder { color: var(--sr-muted); }
+        .send-btn {
+            width: 44px; height: 44px; border-radius: 50%; background: var(--sr-accent); color: #fff;
+            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 1.1rem; transition: all 0.15s;
         }
-        .chat-input-area input:focus { outline: none; border-color: #6366f1; }
-        .chat-input-area button { background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
-        .chat-input-area button:hover { background: #4f46e5; }
-        .chat-input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .send-btn:hover { background: var(--sr-accent-dark); }
+        .send-btn:active { transform: scale(0.9); }
+        .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        .unlimited-badge { font-size: 0.7rem; color: #22c55e; padding: 4px 8px; background: rgba(34,197,94,0.1); border-radius: 6px; }
+        /* Clear history */
+        .clear-history-btn { font-size: 0.7rem; color: var(--sr-muted); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+        .clear-history-btn:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .study-container { flex-direction: column; }
-            .content-viewer { flex: 1; min-height: 45vh; }
-            .ai-panel { max-width: 100%; min-width: 100%; max-height: 55vh; }
+        /* === RESPONSIVE === */
+        @media (max-width: 991px) {
+            .ai-panel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100% !important; min-width: 100%; z-index: 200; transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32,0.72,0,1); }
+            .ai-panel.show { transform: translateY(0); }
+            .ai-toggle-btn { display: flex; align-items: center; justify-content: center; }
+            .ai-panel-close { display: inline-flex !important; }
+            .content-viewer { flex: 1; }
         }
-
-        /* Progress bar */
-        .progress-mini { height: 4px; background: #334155; border-radius: 2px; }
-        .progress-mini .bar { height: 100%; background: #6366f1; border-radius: 2px; transition: width 0.5s; }
-
-        #loading-spinner { display:none; text-align:center; padding:20px; }
-        #loading-spinner.active { display:block; }
-
-        /* Image lightbox modal */
-        .lightbox-modal { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; }
-        .lightbox-modal.show { display:flex; }
-        .lightbox-modal img { max-width:95vw; max-height:95vh; object-fit:contain; }
-        .lightbox-close { position:absolute; top:16px; left:16px; color:#fff; font-size:2rem; cursor:pointer; z-index:10000; }
+        @media (min-width: 992px) {
+            .ai-panel-close { display: none !important; }
+        }
+        @media (max-width: 576px) {
+            .study-toolbar { padding: 0 10px; height: 48px; }
+            .toolbar-title { max-width: 160px; font-size: 0.82rem; }
+            .toolbar-actions .d-flex { gap: 2px !important; }
+        }
     </style>
 </head>
 <body>
-    <!-- Toolbar -->
+    <!-- === Toolbar === -->
     <div class="study-toolbar">
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2 min-w-0">
             <a href="{% url 'student:course_detail' course.pk %}" title="العودة للمقرر"><i class="bi bi-arrow-right fs-5"></i></a>
-            <div>
-                <span class="fw-bold text-white small">{{ file.title|truncatechars:40 }}</span>
-                <span class="text-muted small ms-2">{{ course.course_code }}</span>
+            <div class="min-w-0">
+                <div class="toolbar-title">{{ file.title|truncatechars:45 }}</div>
+                <div class="toolbar-meta">{{ course.course_code }}</div>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <div class="progress-mini" style="width:80px;"><div class="bar" style="width:{{ progress.progress }}%"></div></div>
-                <small class="text-muted">{{ progress.progress }}%</small>
+        <div class="d-flex align-items-center gap-2 toolbar-actions">
+            <div class="d-flex align-items-center gap-2 d-none d-sm-flex">
+                <div class="progress-mini"><div class="bar" style="width:{{ progress.progress }}%"></div></div>
+                <small class="text-muted" style="font-size:0.72rem;">{{ progress.progress }}%</small>
             </div>
-            {% if prev_file %}<a href="{% url 'student:study_room' prev_file.pk %}" class="btn btn-sm btn-outline-light" title="السابق"><i class="bi bi-chevron-right"></i></a>{% endif %}
-            {% if next_file %}<a href="{% url 'student:study_room' next_file.pk %}" class="btn btn-sm btn-outline-light" title="التالي"><i class="bi bi-chevron-left"></i></a>{% endif %}
-            <a href="{% url 'courses:file_download' file.pk %}" class="btn btn-sm btn-outline-light" title="تحميل"><i class="bi bi-download"></i></a>
+            {% if prev_file %}<a href="{% url 'student:study_room' prev_file.pk %}" class="toolbar-btn" title="السابق"><i class="bi bi-chevron-right"></i></a>{% endif %}
+            {% if next_file %}<a href="{% url 'student:study_room' next_file.pk %}" class="toolbar-btn" title="التالي"><i class="bi bi-chevron-left"></i></a>{% endif %}
+            <a href="{% url 'courses:file_download' file.pk %}" class="toolbar-btn" title="تحميل"><i class="bi bi-download"></i></a>
         </div>
     </div>
 
-    <!-- Split Screen -->
+    <!-- === Split View === -->
     <div class="study-container">
-        <!-- Left: Content Viewer -->
+        <!-- Content Viewer -->
         <div class="content-viewer">
             {% if file.is_video %}
                 <video controls autoplay>
@@ -142,23 +204,16 @@
                     متصفحك لا يدعم تشغيل الفيديو.
                 </video>
             {% elif file.is_pdf %}
-                <iframe src="{% url 'streaming:stream_file' file.pk %}#toolbar=1&navpanes=0" style="height:100%;"></iframe>
+                <iframe src="{% url 'streaming:stream_file' file.pk %}#toolbar=1&navpanes=0&view=FitH" style="height:100%;"></iframe>
+            {% elif file.is_image %}
+                <div class="image-viewer">
+                    <img src="{% url 'streaming:stream_file' file.pk %}" alt="{{ file.title }}">
+                </div>
             {% elif file.content_type == 'external_link' %}
                 {% if 'youtube.com' in file.external_link or 'youtu.be' in file.external_link %}
-                <iframe id="youtubeEmbed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope" allowfullscreen style="height:100%;"></iframe>
-                <script>
-                    (function(){
-                        var url = "{{ file.external_link|escapejs }}";
-                        var videoId = '';
-                        var m = url.match(/[?&]v=([^&#]+)/) || url.match(/youtu\.be\/([^?&#]+)/) || url.match(/\/embed\/([^?&#]+)/);
-                        if(m) videoId = m[1];
-                        if(videoId) {
-                            document.getElementById('youtubeEmbed').src = 'https://www.youtube.com/embed/' + videoId;
-                        }
-                    })();
-                </script>
+                    <iframe src="https://www.youtube.com/embed/{{ file.external_link|cut:'https://www.youtube.com/watch?v='|cut:'https://youtu.be/'|cut:'&'|truncatechars:11 }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="height:100%;"></iframe>
                 {% else %}
-                <iframe src="{{ file.external_link }}" style="height:100%;"></iframe>
+                    <iframe src="{{ file.external_link }}" style="height:100%;"></iframe>
                 {% endif %}
             {% elif file.is_image %}
                 <div class="img-viewer">
@@ -186,61 +241,91 @@
                     </div>
                 </div>
             {% else %}
-                <div class="md-viewer">
-                    <div class="text-center py-5">
-                        <i class="bi bi-file-earmark fs-1 d-block mb-3 opacity-50"></i>
-                        <h5>{{ file.title }}</h5>
-                        <p class="text-muted">نوع الملف: {{ file.file_extension|default:"غير معروف" }}</p>
-                        <a href="{% url 'courses:file_download' file.pk %}" class="btn btn-primary"><i class="bi bi-download me-2"></i>تحميل الملف</a>
-                    </div>
+                <div class="file-preview">
+                    <i class="bi {% if file.file_extension == '.docx' or file.file_extension == '.doc' %}bi-file-earmark-word{% elif file.file_extension == '.pptx' or file.file_extension == '.ppt' %}bi-file-earmark-ppt{% elif file.file_extension == '.xlsx' or file.file_extension == '.xls' %}bi-file-earmark-excel{% else %}bi-file-earmark{% endif %}"></i>
+                    <h5>{{ file.title }}</h5>
+                    <p style="color:var(--sr-muted);">نوع الملف: {{ file.file_extension|default:"غير معروف" }} | {{ file.file_size|filesizeformat }}</p>
+                    <a href="{% url 'courses:file_download' file.pk %}" class="btn btn-primary"><i class="bi bi-download me-2"></i>تحميل الملف للعرض</a>
                 </div>
             {% endif %}
         </div>
 
-        <!-- Right: AI Chat Panel (Full Conversation) -->
-        <div class="ai-panel">
+        <!-- AI Chat Panel -->
+        <div class="ai-panel" id="aiPanel">
             <div class="ai-panel-header">
-                <button class="btn btn-outline-light btn-sm" onclick="sendQuickAction('summarize')"><i class="bi bi-text-paragraph me-1"></i>لخّص</button>
-                <button class="btn btn-outline-light btn-sm" onclick="sendQuickAction('quiz')"><i class="bi bi-question-circle me-1"></i>اختبرني</button>
-                <button class="btn btn-outline-light btn-sm" onclick="sendQuickAction('explain')"><i class="bi bi-lightbulb me-1"></i>اشرح</button>
-                <span class="unlimited-badge ms-auto"><i class="bi bi-infinity me-1"></i>غير محدود</span>
+                <div class="ai-panel-title">
+                    <h6><i class="bi bi-robot me-2"></i>مساعد الدراسة الذكي</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="remaining-badge"><i class="bi bi-stars me-1"></i><span id="remainingCount">{{ remaining_requests }}</span></span>
+                        <button class="clear-history-btn" onclick="clearHistory()" title="مسح المحادثة"><i class="bi bi-trash3"></i></button>
+                        <button class="ai-panel-close toolbar-btn" onclick="toggleAIPanel()" style="display:none;" title="إغلاق"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="sendQuickAction('summarize')"><i class="bi bi-text-paragraph"></i>لخّص</button>
+                    <button class="quick-action-btn" onclick="sendQuickAction('quiz')"><i class="bi bi-question-circle"></i>اختبرني</button>
+                    <button class="quick-action-btn" onclick="sendQuickAction('explain')"><i class="bi bi-lightbulb"></i>اشرح</button>
+                    <button class="quick-action-btn" onclick="sendQuickAction('keypoints')"><i class="bi bi-list-check"></i>نقاط رئيسية</button>
+                    <button class="quick-action-btn" onclick="sendQuickAction('definitions')"><i class="bi bi-journal-text"></i>تعريفات</button>
+                </div>
             </div>
 
             <div class="chat-area" id="chatArea">
                 {% if existing_summary %}
                 <div class="chat-msg bot">
-                    <strong><i class="bi bi-robot me-1"></i>ملخص سابق:</strong><br>
-                    <div class="md-content">{{ existing_summary.summary_text|truncatechars:300 }}</div>
+                    <strong><i class="bi bi-file-text me-1"></i>ملخص سابق:</strong><br>
+                    {{ existing_summary.summary_text|linebreaksbr|truncatechars:500 }}
                 </div>
                 {% endif %}
-                {% for msg in chat_history %}
-                <div class="chat-msg user">{{ msg.question }}<div class="chat-time">{{ msg.created_at|date:"H:i" }}</div></div>
-                <div class="chat-msg bot"><div class="md-content">{{ msg.answer }}</div><div class="chat-time">{{ msg.created_at|date:"H:i" }}</div></div>
-                {% endfor %}
-                <div id="loading-spinner"><div class="spinner-border spinner-border-sm text-primary"></div> جاري التحليل...</div>
+                {% if chat_history %}
+                    {% for msg in chat_history %}
+                    <div class="chat-msg user">{{ msg.question }}<div class="chat-time">{{ msg.created_at|date:"H:i" }}</div></div>
+                    <div class="chat-msg bot">{{ msg.answer|linebreaksbr }}<div class="chat-time">{{ msg.created_at|date:"H:i" }}</div></div>
+                    {% endfor %}
+                {% else %}
+                    {% if not existing_summary %}
+                    <div class="chat-welcome">
+                        <i class="bi bi-robot"></i>
+                        <h6 style="color:#fff;">مرحباً! أنا مساعدك الذكي</h6>
+                        <p>اسألني أي شيء عن محتوى "{{ file.title|truncatechars:30 }}"</p>
+                        <p>أو استخدم الأزرار السريعة أعلاه للبدء</p>
+                    </div>
+                    {% endif %}
+                {% endif %}
             </div>
 
             <div class="chat-input-area">
-                <input type="text" id="chatInput" placeholder="اسأل عن المحتوى..." onkeypress="if(event.key==='Enter')sendMessage()">
-                <button id="sendBtn" onclick="sendMessage()"><i class="bi bi-send"></i></button>
+                <div class="chat-input-wrapper">
+                    <textarea id="chatInput" placeholder="اسأل عن المحتوى..." rows="1"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+                        oninput="autoResize(this)"></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="إرسال"><i class="bi bi-send"></i></button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Image Lightbox -->
-    <div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox()">
-        <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
-        <img id="lightboxImg" src="" alt="عرض مكبر">
-    </div>
+    <!-- Mobile AI Toggle -->
+    <button class="ai-toggle-btn" id="aiToggleBtn" onclick="toggleAIPanel()">
+        <i class="bi bi-robot"></i>
+    </button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Markdown parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
     <script>
         const chatArea = document.getElementById('chatArea');
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
-        const loadingSpinner = document.getElementById('loading-spinner');
         const csrfToken = '{{ csrf_token }}';
         const chatUrl = '{% url "student:ai_chat" file.pk %}';
+        const clearUrl = '{% url "student:ai_chat_clear" file.pk %}';
+        let isProcessing = false;
+
+        // Configure marked for safe rendering
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({ breaks: true, gfm: true });
+        }
 
         // Configure marked for Markdown rendering
         if (typeof marked !== 'undefined') {
@@ -263,44 +348,78 @@
         }
         scrollToBottom();
 
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
+        function renderMarkdown(text) {
+            if (typeof marked !== 'undefined') {
+                try { return marked.parse(text); } catch(e) {}
+            }
+            return text.replace(/\n/g, '<br>');
+        }
+
         function addMessage(text, type) {
+            // Remove welcome message
+            const welcome = chatArea.querySelector('.chat-welcome');
+            if (welcome) welcome.remove();
+
             const div = document.createElement('div');
             div.className = `chat-msg ${type}`;
             if (type === 'bot') {
-                const mdDiv = document.createElement('div');
-                mdDiv.className = 'md-content';
-                if (typeof marked !== 'undefined') {
-                    mdDiv.innerHTML = marked.parse(text);
-                } else {
-                    mdDiv.innerHTML = text.replace(/\n/g, '<br>');
-                }
-                div.appendChild(mdDiv);
+                div.innerHTML = renderMarkdown(text);
             } else {
                 div.textContent = text;
             }
-            chatArea.insertBefore(div, loadingSpinner);
+            const timeEl = document.createElement('div');
+            timeEl.className = 'chat-time';
+            timeEl.textContent = new Date().toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'});
+            div.appendChild(timeEl);
+            chatArea.appendChild(div);
             scrollToBottom();
+        }
+
+        function showTyping() {
+            const el = document.createElement('div');
+            el.className = 'typing-indicator';
+            el.id = 'typingIndicator';
+            el.innerHTML = '<span></span><span></span><span></span>';
+            chatArea.appendChild(el);
+            scrollToBottom();
+        }
+
+        function hideTyping() {
+            const el = document.getElementById('typingIndicator');
+            if (el) el.remove();
         }
 
         function sendMessage() {
             const q = chatInput.value.trim();
-            if (!q) return;
+            if (!q || isProcessing) return;
             addMessage(q, 'user');
             chatInput.value = '';
+            chatInput.style.height = 'auto';
             doSend(q, 'ask');
         }
 
         function sendQuickAction(action) {
-            const labels = {summarize:'لخّص هذا المحتوى', quiz:'اختبرني في هذا المحتوى', explain:'اشرح المفاهيم الرئيسية'};
+            if (isProcessing) return;
+            const labels = {
+                summarize: 'لخّص هذا المحتوى بالتفصيل',
+                quiz: 'اختبرني بأسئلة متنوعة عن المحتوى',
+                explain: 'اشرح المفاهيم الرئيسية بطريقة مبسطة',
+                keypoints: 'استخرج النقاط الرئيسية في قائمة مرتبة',
+                definitions: 'استخرج جميع التعريفات والمصطلحات المهمة'
+            };
             addMessage(labels[action] || action, 'user');
             doSend('', action);
         }
 
         function doSend(question, action) {
-            loadingSpinner.classList.add('active');
+            isProcessing = true;
             sendBtn.disabled = true;
-            chatInput.disabled = true;
-            scrollToBottom();
+            showTyping();
 
             const formData = new FormData();
             formData.append('question', question);
@@ -313,36 +432,60 @@
             })
             .then(r => r.json())
             .then(data => {
-                loadingSpinner.classList.remove('active');
+                hideTyping();
+                isProcessing = false;
                 sendBtn.disabled = false;
-                chatInput.disabled = false;
-                chatInput.focus();
                 if (data.success) {
                     addMessage(data.answer, 'bot');
+                    if (data.remaining !== undefined) {
+                        document.getElementById('remainingCount').textContent = data.remaining;
+                    }
                 } else {
-                    addMessage('⚠️ ' + (data.error || 'حدث خطأ'), 'bot');
+                    addMessage('⚠️ ' + (data.error || 'حدث خطأ، حاول مرة أخرى'), 'bot');
                 }
             })
             .catch(() => {
-                loadingSpinner.classList.remove('active');
+                hideTyping();
+                isProcessing = false;
                 sendBtn.disabled = false;
-                chatInput.disabled = false;
-                addMessage('⚠️ خطأ في الاتصال. يرجى المحاولة مرة أخرى.', 'bot');
+                addMessage('⚠️ خطأ في الاتصال، تحقق من الإنترنت وحاول مرة أخرى', 'bot');
             });
         }
 
-        // Image viewer functions
-        function toggleZoom(img) {
-            img.classList.toggle('zoomed');
+        function clearHistory() {
+            if (!confirm('هل تريد مسح جميع المحادثات؟')) return;
+            fetch(clearUrl, {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken},
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    chatArea.innerHTML = `<div class="chat-welcome"><i class="bi bi-robot"></i><h6 style="color:#fff;">تم مسح المحادثة</h6><p>ابدأ محادثة جديدة!</p></div>`;
+                }
+            });
         }
-        function openLightbox(src) {
-            document.getElementById('lightboxImg').src = src;
-            document.getElementById('lightboxModal').classList.add('show');
+
+        // Mobile AI Panel Toggle
+        function toggleAIPanel() {
+            const panel = document.getElementById('aiPanel');
+            panel.classList.toggle('show');
+            scrollToBottom();
         }
-        function closeLightbox() {
-            document.getElementById('lightboxModal').classList.remove('show');
+
+        // Update progress
+        let progressTimer;
+        function updateProgress() {
+            clearTimeout(progressTimer);
+            progressTimer = setTimeout(() => {
+                fetch('{% url "student:update_progress" file.pk %}', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': csrfToken, 'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/json'},
+                    body: JSON.stringify({progress: Math.min(100, {{ progress.progress }} + 10)})
+                }).catch(() => {});
+            }, 30000);
         }
-        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
+        updateProgress();
     </script>
 </body>
 </html>

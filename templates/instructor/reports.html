@@ -94,6 +94,19 @@
     </a>
 </div>
 
+<!-- Download / Export Actions -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <button class="btn btn-outline-success btn-sm" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>طباعة التقرير
+    </button>
+    <a href="?tab={{ active_tab }}&export=csv" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-file-earmark-excel me-1"></i>تصدير CSV
+    </a>
+    <a href="?tab={{ active_tab }}&export=pdf" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>تصدير PDF
+    </a>
+</div>
+
 <!-- ============ OVERVIEW ============ -->
 {% if active_tab == 'overview' %}
 <div class="row g-3 mb-4">

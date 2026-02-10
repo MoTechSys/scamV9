@@ -2,6 +2,22 @@
 {% block title %}مركز الذكاء الاصطناعي{% endblock %}
 {% block page_title %}مركز الذكاء الاصطناعي{% endblock %}
 
+{% block extra_css %}
+<style>
+.files-container { max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
+.files-container::-webkit-scrollbar { width: 4px; }
+.files-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+.file-check-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border-light); transition: background 0.15s; cursor: pointer; }
+.file-check-item:hover { background: var(--primary-10); }
+.file-check-item:last-child { border-bottom: none; }
+.file-check-item .form-check-input { flex-shrink: 0; }
+.file-check-item .file-info { min-width: 0; flex: 1; }
+.file-check-item .file-name { font-weight: 600; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-check-item .file-meta { font-size: 0.72rem; color: var(--text-secondary); }
+.selected-count { font-size: 0.78rem; font-weight: 600; color: var(--primary); }
+</style>
+{% endblock %}
+
 {% block dashboard_content %}
 <!-- Tabs -->
 <ul class="nav nav-tabs mb-4" role="tablist">
@@ -14,85 +30,90 @@
     <div class="tab-pane fade {% if active_tab == 'generator' %}show active{% endif %}" id="generator">
         <div class="card">
             <div class="card-body p-4">
-                <form method="post" action="{% url 'instructor:ai_generate' %}">
+                <form method="post" action="{% url 'instructor:ai_generate' %}" id="aiGenForm">
                     {% csrf_token %}
-                    <!-- Source Selection -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold"><i class="bi bi-book me-1"></i>المقرر</label>
-                            <select class="form-select" id="courseSelect" name="course_id"
-                                    hx-get="{% url 'instructor:course_files_ajax' %}"
-                                    hx-target="#filesList"
-                                    hx-trigger="change"
-                                    hx-include="[name='course_id']"
-                                    hx-vals='js:{"course_id": document.getElementById("courseSelect").value}'>
+
+                    <!-- Step 1: Source Selection -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-1-circle-fill me-2 text-primary"></i>اختيار المصدر</h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">المقرر</label>
+                            <select class="form-select" id="courseSelect" name="course_id" onchange="loadCourseFiles(this.value)" required>
                                 <option value="">اختر المقرر...</option>
                                 {% for course in courses %}
                                 <option value="{{ course.pk }}">{{ course.course_code }} - {{ course.course_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-7">
-                            <label class="form-label fw-semibold"><i class="bi bi-files me-1"></i>اختر الملفات</label>
-                            <div class="border rounded" style="max-height:250px; overflow-y:auto;">
-                                <div id="filesList">
-                                    <div class="text-center text-muted py-4">
-                                        <i class="bi bi-arrow-right-circle me-1"></i>اختر المقرر أولاً لعرض الملفات
-                                    </div>
+
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">الملفات <small class="text-muted fw-normal">(اختر ملفاً واحداً أو أكثر)</small></label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="selected-count" id="selectedCount">0 ملفات محددة</span>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" style="font-size:0.72rem;padding:3px 10px;border-radius:20px;" onclick="toggleAllFiles()">
+                                        <i class="bi bi-check-all me-1"></i>الكل
+                                    </button>
                                 </div>
                             </div>
-                            <div class="d-flex gap-2 mt-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleAllFiles(true)">
-                                    <i class="bi bi-check-all me-1"></i>تحديد الكل
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAllFiles(false)">
-                                    <i class="bi bi-x-lg me-1"></i>إلغاء التحديد
-                                </button>
-                                <small class="text-muted align-self-center ms-auto" id="selectedCount">0 ملفات محددة</small>
+                            <div class="files-container" id="filesContainer">
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-arrow-up-circle d-block mb-2" style="font-size:1.5rem;opacity:0.3;"></i>
+                                    <span style="font-size:0.85rem;">اختر المقرر أولاً لعرض الملفات</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Question Matrix -->
-                    <h6 class="fw-bold mb-3"><i class="bi bi-grid-3x3 me-1"></i>مصفوفة الأسئلة</h6>
-                    <div class="table-responsive mb-4">
-                        <table class="table table-bordered">
-                            <thead class="table-light">
-                                <tr><th>النوع</th><th>العدد</th><th>الدرجة لكل سؤال</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>اختيار من متعدد (MCQ)</td>
-                                    <td><input type="number" class="form-control form-control-sm q-count" name="mcq_count" value="5" min="0" max="50"></td>
-                                    <td><input type="number" class="form-control form-control-sm q-score" name="mcq_score" value="2.0" min="0" max="100" step="0.5"></td>
-                                </tr>
-                                <tr>
-                                    <td>صح وخطأ</td>
-                                    <td><input type="number" class="form-control form-control-sm q-count" name="true_false_count" value="5" min="0" max="50"></td>
-                                    <td><input type="number" class="form-control form-control-sm q-score" name="true_false_score" value="1.0" min="0" max="100" step="0.5"></td>
-                                </tr>
-                                <tr>
-                                    <td>إجابة قصيرة</td>
-                                    <td><input type="number" class="form-control form-control-sm q-count" name="short_answer_count" value="3" min="0" max="50"></td>
-                                    <td><input type="number" class="form-control form-control-sm q-score" name="short_answer_score" value="3.0" min="0" max="100" step="0.5"></td>
-                                </tr>
-                            </tbody>
-                            <tfoot class="table-light">
-                                <tr><td class="fw-bold">الإجمالي</td><td id="totalQuestions" class="fw-bold">13</td><td id="totalScore" class="fw-bold">24.0</td></tr>
-                            </tfoot>
-                        </table>
+                    <!-- Step 2: Generation Type -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-2-circle-fill me-2 text-primary"></i>نوع التوليد</h6>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="generate_summary" id="genSummary" checked>
+                            <label class="form-check-label" for="genSummary"><i class="bi bi-file-text me-1 text-primary"></i>توليد ملخص شامل</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="generate_questions" id="genQuestions" onchange="toggleQuizConfig()">
+                            <label class="form-check-label" for="genQuestions"><i class="bi bi-question-circle me-1 text-warning"></i>توليد أسئلة اختبارية</label>
+                        </div>
                     </div>
 
-                    <!-- Context Notes -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">ملاحظات السياق (اختياري)</label>
+                    <!-- Step 3: Question Matrix (conditional) -->
+                    <div class="mb-4" id="quizConfig" style="display:none;">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-3-circle-fill me-2 text-primary"></i>مصفوفة الأسئلة</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered mb-0">
+                                <thead class="table-light">
+                                    <tr><th>النوع</th><th style="width:100px;">العدد</th><th style="width:120px;">الدرجة/سؤال</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><i class="bi bi-ui-radios text-primary me-1"></i>اختيار من متعدد</td>
+                                        <td><input type="number" class="form-control form-control-sm q-input" name="mcq_count" value="5" min="0" max="50"></td>
+                                        <td><input type="number" class="form-control form-control-sm q-input" name="mcq_score" value="2.0" min="0" max="100" step="0.5"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="bi bi-check-circle text-success me-1"></i>صح وخطأ</td>
+                                        <td><input type="number" class="form-control form-control-sm q-input" name="true_false_count" value="5" min="0" max="50"></td>
+                                        <td><input type="number" class="form-control form-control-sm q-input" name="true_false_score" value="1.0" min="0" max="100" step="0.5"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="bi bi-pencil-square text-danger me-1"></i>إجابة قصيرة</td>
+                                        <td><input type="number" class="form-control form-control-sm q-input" name="short_answer_count" value="3" min="0" max="50"></td>
+                                        <td><input type="number" class="form-control form-control-sm q-input" name="short_answer_score" value="3.0" min="0" max="100" step="0.5"></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr><td class="fw-bold">الإجمالي</td><td id="totalQuestions" class="fw-bold">13</td><td id="totalScore" class="fw-bold">24.0</td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Context Notes -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-chat-dots me-2 text-primary"></i>ملاحظات وتوجيهات <small class="text-muted fw-normal">(اختياري)</small></h6>
                         <textarea class="form-control" name="user_notes" rows="3" placeholder="مثال: ركّز على الفصل الثالث، صعوبة متوسطة، أضف أمثلة عملية..."></textarea>
-                    </div>
-
-                    <!-- Generate Summary Option -->
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" name="generate_summary" id="genSummary">
-                        <label class="form-check-label" for="genSummary">توليد ملخص أيضاً</label>
                     </div>
 
                     <button type="submit" class="btn btn-primary btn-lg w-100" id="generateBtn">
@@ -108,7 +129,8 @@
         <div class="card">
             <div class="card-body p-0">
                 {% if recent_jobs %}
-                <div class="table-responsive">
+                {# Desktop Table #}
+                <div class="d-none d-md-block table-responsive">
                     <table class="table table-hover mb-0">
                         <thead><tr><th>التاريخ</th><th>الملف</th><th>النوع</th><th>الحالة</th><th>إجراءات</th></tr></thead>
                         <tbody>
@@ -124,13 +146,40 @@
                                 {% else %}<span class="badge bg-secondary">انتظار</span>{% endif %}
                             </td>
                             <td>
-                                {% if job.md_file_path %}<a href="{% url 'streaming:stream_markdown' job.md_file_path %}" class="btn btn-sm btn-outline-primary" target="_blank"><i class="bi bi-eye"></i></a>{% endif %}
-                                <form method="post" action="{% url 'instructor:ai_archive_delete' job.pk %}" class="d-inline" onsubmit="return confirm('حذف هذا السجل؟')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+                                <div class="d-flex gap-1">
+                                    {% if job.md_file_path %}
+                                    <a href="{% url 'streaming:stream_markdown' job.md_file_path %}" class="btn btn-sm btn-outline-primary" target="_blank" title="عرض"><i class="bi bi-eye"></i></a>
+                                    <a href="{% url 'streaming:stream_markdown' job.md_file_path %}" download class="btn btn-sm btn-outline-success" title="تحميل"><i class="bi bi-download"></i></a>
+                                    {% endif %}
+                                    <form method="post" action="{% url 'instructor:ai_archive_delete' job.pk %}" class="d-inline" onsubmit="return confirm('حذف هذا السجل؟')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button></form>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                         </tbody>
                     </table>
+                </div>
+                {# Mobile Cards #}
+                <div class="d-block d-md-none">
+                    {% for job in recent_jobs %}
+                    <div class="p-3 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="min-w-0">
+                                <div class="fw-bold text-truncate" style="font-size:0.88rem;">{{ job.file.title|truncatechars:30 }}</div>
+                                <small class="text-muted">{{ job.file.course.course_code }} | {{ job.created_at|date:"Y/m/d" }}</small>
+                            </div>
+                            {% if job.status == 'completed' %}<span class="badge bg-success">مكتمل</span>
+                            {% elif job.status == 'failed' %}<span class="badge bg-danger">فشل</span>
+                            {% else %}<span class="badge bg-warning">معالجة</span>{% endif %}
+                        </div>
+                        <div class="d-flex gap-1">
+                            {% if job.md_file_path %}
+                            <a href="{% url 'streaming:stream_markdown' job.md_file_path %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye me-1"></i>عرض</a>
+                            <a href="{% url 'streaming:stream_markdown' job.md_file_path %}" download class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i>تحميل</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
                 {% else %}
                 <div class="empty-state py-5"><i class="bi bi-archive d-block"></i><p>لا توجد عمليات سابقة</p></div>
@@ -139,53 +188,74 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Select/Deselect all files
-function toggleAllFiles(selectAll) {
-    document.querySelectorAll('#filesList .file-checkbox').forEach(cb => {
-        cb.checked = selectAll;
-    });
+function loadCourseFiles(courseId) {
+    const container = document.getElementById('filesContainer');
+    container.innerHTML = '<div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm" role="status"></div> جاري التحميل...</div>';
+    if (!courseId) { container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-arrow-up-circle d-block mb-2" style="font-size:1.5rem;opacity:0.3;"></i><span>اختر المقرر أولاً</span></div>'; updateSelectedCount(); return; }
+
+    fetch(`{% url 'instructor:course_files_ajax' %}?course_id=${courseId}`)
+        .then(r => r.json()).then(data => {
+            if (!data.files || data.files.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-file-earmark d-block mb-2" style="font-size:1.5rem;opacity:0.3;"></i><span>لا توجد ملفات في هذا المقرر</span></div>';
+                return;
+            }
+            container.innerHTML = data.files.map(f => `
+                <label class="file-check-item">
+                    <input class="form-check-input file-checkbox" type="checkbox" name="file_ids" value="${f.id}" onchange="updateSelectedCount()">
+                    <div class="file-info">
+                        <div class="file-name">${f.title}</div>
+                        <div class="file-meta">${f.file_extension || f.file_type} ${f.file_size ? '| ' + f.file_size : ''}</div>
+                    </div>
+                </label>
+            `).join('');
+            updateSelectedCount();
+        }).catch(() => { container.innerHTML = '<div class="text-center text-danger py-3"><i class="bi bi-exclamation-triangle me-1"></i>خطأ في التحميل</div>'; });
+}
+
+function toggleAllFiles() {
+    const checkboxes = document.querySelectorAll('.file-checkbox');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
     updateSelectedCount();
 }
 
-// Update selected count
 function updateSelectedCount() {
-    const count = document.querySelectorAll('#filesList .file-checkbox:checked').length;
+    const count = document.querySelectorAll('.file-checkbox:checked').length;
     document.getElementById('selectedCount').textContent = count + ' ملفات محددة';
 }
 
-// Listen for checkbox changes (delegated)
-document.getElementById('filesList').addEventListener('change', function(e) {
-    if (e.target.classList.contains('file-checkbox')) {
-        updateSelectedCount();
-    }
-});
-
-// HTMX after-swap: update count after files load
-document.body.addEventListener('htmx:afterSwap', function(e) {
-    if (e.detail.target.id === 'filesList') {
-        updateSelectedCount();
-    }
-});
+function toggleQuizConfig() {
+    document.getElementById('quizConfig').style.display = document.getElementById('genQuestions').checked ? 'block' : 'none';
+}
 
 // Calculate totals
-document.querySelectorAll('.q-count, .q-score').forEach(el => {
+document.querySelectorAll('.q-input').forEach(el => {
     el.addEventListener('input', () => {
         let totalQ = 0, totalS = 0;
-        const rows = document.querySelectorAll('tbody tr');
+        const rows = document.querySelectorAll('#quizConfig tbody tr');
         rows.forEach(row => {
-            const count = parseFloat(row.querySelector('.q-count')?.value || 0);
-            const score = parseFloat(row.querySelector('.q-score')?.value || 0);
+            const inputs = row.querySelectorAll('.q-input');
+            const count = parseFloat(inputs[0]?.value || 0);
+            const score = parseFloat(inputs[1]?.value || 0);
             totalQ += count;
             totalS += count * score;
         });
         document.getElementById('totalQuestions').textContent = totalQ;
         document.getElementById('totalScore').textContent = totalS.toFixed(1);
     });
+});
+
+// Form validation
+document.getElementById('aiGenForm').addEventListener('submit', function(e) {
+    const files = document.querySelectorAll('.file-checkbox:checked');
+    if (files.length === 0) { e.preventDefault(); alert('يرجى اختيار ملف واحد على الأقل.'); return; }
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>جاري التوليد...';
 });
 </script>
 {% endblock %}

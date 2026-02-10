@@ -155,6 +155,14 @@
                 </a>
             </div>
 
+            <div class="sidebar-section-title">التقارير</div>
+            <div class="nav-item">
+                <a class="nav-link {% if active_page == 'reports' %}active{% endif %}" href="{% url 'student:reports' %}" title="تقاريري">
+                    <i class="bi bi-bar-chart-line"></i>
+                    <span class="link-text">تقاريري</span>
+                </a>
+            </div>
+
             <div class="sidebar-section-title">التواصل</div>
             <div class="nav-item">
                 <a class="nav-link {% if active_page == 'notifications' %}active{% endif %}" href="{% url 'notifications:management' %}" title="إدارة الإشعارات">
@@ -412,6 +420,10 @@
                 <a href="{% url 'ai_features:usage_stats' %}" class="drawer-item">
                     <div class="drawer-item-icon"><i class="bi bi-bar-chart"></i></div>
                     <span class="text-truncate">إحصائيات AI</span>
+                </a>
+                <a href="{% url 'student:reports' %}" class="drawer-item {% if active_page == 'reports' %}active{% endif %}">
+                    <div class="drawer-item-icon"><i class="bi bi-bar-chart-line"></i></div>
+                    <span class="text-truncate">تقاريري</span>
                 </a>
                 <a href="{% url 'student:settings' %}" class="drawer-item {% if active_page == 'settings' %}active{% endif %}">
                     <div class="drawer-item-icon"><i class="bi bi-gear"></i></div>

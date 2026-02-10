@@ -64,6 +64,7 @@
                         <td>{{ file.download_count }}</td>
                         <td>
                             <div class="d-flex gap-1">
+                                <a href="{% url 'student:study_room' file.pk %}" class="btn btn-sm btn-outline-info" title="معاينة" target="_blank"><i class="bi bi-eye"></i></a>
                                 <form method="post" action="{% url 'instructor:file_toggle_visibility' file.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" title="تبديل الظهور"><i class="bi bi-eye{% if not file.is_visible %}-slash{% endif %}"></i></button></form>
                                 <a href="{% url 'instructor:file_update' file.pk %}" class="btn btn-sm btn-outline-primary" title="تعديل"><i class="bi bi-pencil"></i></a>
                                 <form method="post" action="{% url 'instructor:file_delete' file.pk %}" class="d-inline" onsubmit="return confirm('نقل للمهملات؟')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button></form>

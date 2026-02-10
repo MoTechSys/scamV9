@@ -17,6 +17,12 @@
  */
 
 /* ==========================================================
+   1. FONT STACK - System Arabic fonts (no external downloads)
+   ========================================================== */
+/* Using system font stack for maximum performance.
+   No woff2 files or Google CDN needed - loads instantly. */
+
+/* ==========================================================
    2. CSS CUSTOM PROPERTIES (Design Tokens)
    ========================================================== */
 :root {
@@ -62,8 +68,8 @@
     --radius-xl: 20px;
     --radius-full: 9999px;
 
-    /* Typography - System fonts only for performance */
-    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Arabic', sans-serif;
+    /* Typography - System font stack (instant load, no network) */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', 'Noto Kufi Arabic', 'Droid Arabic Kufi', 'Geeza Pro', 'Simplified Arabic', sans-serif;
 
     /* Transitions */
     --transition-fast: 0.15s ease;
