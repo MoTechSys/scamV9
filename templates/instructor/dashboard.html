@@ -3,47 +3,47 @@
 {% block page_title %}لوحة التحكم{% endblock %}
 
 {% block dashboard_content %}
-<!-- Stats Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3">
+<!-- Stats Cards (Compact 2x2 grid on mobile, 4 cols on desktop) -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-gradient-primary">
             <div class="d-flex justify-content-between align-items-start">
-                <div>
+                <div class="min-w-0">
                     <div class="stat-value">{{ total_courses }}</div>
-                    <div class="stat-label">المقررات</div>
+                    <div class="stat-label text-truncate">المقررات</div>
                 </div>
                 <i class="bi bi-book stat-icon"></i>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-gradient-success">
             <div class="d-flex justify-content-between align-items-start">
-                <div>
+                <div class="min-w-0">
                     <div class="stat-value">{{ total_files }}</div>
-                    <div class="stat-label">الملفات</div>
+                    <div class="stat-label text-truncate">الملفات</div>
                 </div>
                 <i class="bi bi-files stat-icon"></i>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-gradient-info">
             <div class="d-flex justify-content-between align-items-start">
-                <div>
+                <div class="min-w-0">
                     <div class="stat-value">{{ total_views }}</div>
-                    <div class="stat-label">المشاهدات</div>
+                    <div class="stat-label text-truncate">المشاهدات</div>
                 </div>
                 <i class="bi bi-eye stat-icon"></i>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-gradient-warning">
             <div class="d-flex justify-content-between align-items-start">
-                <div>
+                <div class="min-w-0">
                     <div class="stat-value">{{ total_downloads }}</div>
-                    <div class="stat-label">التحميلات</div>
+                    <div class="stat-label text-truncate">التحميلات</div>
                 </div>
                 <i class="bi bi-download stat-icon"></i>
             </div>
@@ -51,29 +51,48 @@
     </div>
 </div>
 
-<div class="row g-4">
-    <!-- My Courses -->
+<div class="row g-3">
+    <!-- My Courses Table -->
     <div class="col-lg-8">
         <div class="card">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
-                <h6 class="mb-0 fw-bold"><i class="bi bi-book me-2"></i>مقرراتي</h6>
-                <a href="{% url 'instructor:course_list' %}" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+            <div class="card-header d-flex justify-content-between align-items-center gap-2">
+                <h6 class="mb-0 fw-bold text-truncate"><i class="bi bi-book me-2"></i>مقرراتي</h6>
+                <a href="{% url 'instructor:course_list' %}" class="btn btn-sm btn-outline-primary flex-shrink-0">
+                    <i class="bi bi-arrow-left me-1"></i><span class="d-none d-sm-inline">عرض الكل</span>
+                </a>
             </div>
             <div class="card-body p-0">
                 {% if my_courses %}
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
-                        <thead><tr><th>المقرر</th><th>المستوى</th><th>الملفات</th><th>الطلاب</th><th>إجراءات</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>المقرر</th>
+                                <th>المستوى</th>
+                                <th>الملفات</th>
+                                <th class="d-none d-md-table-cell">الطلاب</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
                         <tbody>
                         {% for course in my_courses %}
                         <tr>
-                            <td><strong>{{ course.course_code }}</strong> - {{ course.course_name|truncatechars:30 }}</td>
+                            <td class="min-w-0" style="max-width:180px;">
+                                <strong class="d-block text-truncate">{{ course.course_code }}</strong>
+                                <small class="text-muted text-truncate d-block">{{ course.course_name|truncatechars:28 }}</small>
+                            </td>
                             <td><span class="badge bg-light text-dark">{{ course.level }}</span></td>
                             <td>{{ course.files.count }}</td>
-                            <td>-</td>
+                            <td class="d-none d-md-table-cell">-</td>
                             <td>
-                                <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
-                                <a href="{% url 'instructor:student_roster' course.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-people"></i></a>
+                                <div class="d-flex gap-1">
+                                    <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-sm btn-outline-primary" title="عرض">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'instructor:student_roster' course.pk %}" class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex" title="الطلاب">
+                                        <i class="bi bi-people"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -81,36 +100,57 @@
                     </table>
                 </div>
                 {% else %}
-                <div class="empty-state py-5"><i class="bi bi-book d-block"></i><p>لا توجد مقررات معينة لك حالياً</p></div>
+                <div class="empty-state">
+                    <i class="bi bi-book d-block"></i>
+                    <p class="mb-0">لا توجد مقررات معينة لك حالياً</p>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Quick Actions + Recent -->
+    <!-- Quick Actions + Recent Uploads -->
     <div class="col-lg-4">
+        <!-- Quick Actions -->
         <div class="card mb-3">
-            <div class="card-header bg-transparent py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-lightning me-2"></i>إجراءات سريعة</h6></div>
+            <div class="card-header">
+                <h6 class="mb-0 fw-bold text-truncate"><i class="bi bi-lightning me-2"></i>إجراءات سريعة</h6>
+            </div>
             <div class="card-body d-grid gap-2">
-                <a href="{% url 'instructor:file_upload' %}" class="btn btn-primary"><i class="bi bi-upload me-2"></i>رفع ملف جديد</a>
-                <a href="{% url 'instructor:ai_hub' %}" class="btn btn-outline-primary"><i class="bi bi-robot me-2"></i>مركز الذكاء الاصطناعي</a>
-                <a href="{% url 'instructor:trash_list' %}" class="btn btn-outline-secondary"><i class="bi bi-trash3 me-2"></i>سلة المهملات {% if trash_count %}({{ trash_count }}){% endif %}</a>
+                <a href="{% url 'instructor:file_upload' %}" class="btn btn-primary">
+                    <i class="bi bi-cloud-upload me-2"></i>
+                    <span class="text-truncate">رفع ملف جديد</span>
+                </a>
+                <a href="{% url 'instructor:ai_hub' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-robot me-2"></i>
+                    <span class="text-truncate">مركز الذكاء الاصطناعي</span>
+                </a>
+                <a href="{% url 'instructor:trash_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-trash3 me-2"></i>
+                    <span class="text-truncate">سلة المهملات {% if trash_count %}({{ trash_count }}){% endif %}</span>
+                </a>
             </div>
         </div>
 
+        <!-- Recent Uploads -->
         <div class="card">
-            <div class="card-header bg-transparent py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>آخر الرفع</h6></div>
+            <div class="card-header">
+                <h6 class="mb-0 fw-bold text-truncate"><i class="bi bi-clock-history me-2"></i>آخر الرفع</h6>
+            </div>
             <div class="list-group list-group-flush">
                 {% for file in recent_uploads %}
-                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                    <div>
-                        <div class="fw-semibold small">{{ file.title|truncatechars:25 }}</div>
-                        <small class="text-muted">{{ file.course.course_code }} - {{ file.upload_date|timesince }}</small>
+                <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                    <div class="min-w-0 flex-grow-1">
+                        <div class="fw-semibold small text-truncate">{{ file.title|truncatechars:25 }}</div>
+                        <small class="text-muted text-truncate d-block">{{ file.course.course_code }} - {{ file.upload_date|timesince }}</small>
                     </div>
-                    <span class="badge bg-primary-subtle text-primary">{{ file.file_type }}</span>
+                    <span class="badge bg-primary-subtle text-primary flex-shrink-0">{{ file.file_type }}</span>
                 </div>
                 {% empty %}
-                <div class="list-group-item text-center text-muted py-4">لا توجد ملفات بعد</div>
+                <div class="list-group-item text-center text-muted py-4">
+                    <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem;opacity:0.3;"></i>
+                    <small>لا توجد ملفات بعد</small>
+                </div>
                 {% endfor %}
             </div>
         </div>
