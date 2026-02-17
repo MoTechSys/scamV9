@@ -19,7 +19,12 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') + ['*']
+ALLOWED_HOSTS = [
+    h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()
+]
+# In DEBUG mode allow all hosts for local development convenience
+if DEBUG:
+    ALLOWED_HOSTS.append('*')
 
 # CSRF Trusted Origins for external access
 _csrf_env = os.getenv('CSRF_TRUSTED_ORIGINS', '')
