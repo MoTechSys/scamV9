@@ -1,20 +1,28 @@
 """
-Management Command لإنشاء البيانات الأولية للنظام
+Management Command - Initial System Data Setup.
+
+Creates default roles, permissions, role-permission bindings,
+academic levels, semesters, sample majors, and an admin user.
+
 S-ACM - Smart Academic Content Management System
 """
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from apps.accounts.models import Role, Permission, RolePermission, Level, Semester, Major, User
-from datetime import date, timedelta
+from apps.accounts.models import (
+    Role, Permission, RolePermission, Level, Semester, Major, User,
+)
+from datetime import date
 
 
 class Command(BaseCommand):
-    help = 'إنشاء البيانات الأولية للنظام (الأدوار، الصلاحيات، المستويات، الفصول)'
+    """Bootstrap command that populates the database with seed data."""
+
+    help = 'Create initial system data (roles, permissions, levels, semesters)'
 
     def handle(self, *args, **options):
-        self.stdout.write('جاري إنشاء البيانات الأولية...\n')
-        
+        self.stdout.write('Creating initial data ...\n')
+
         with transaction.atomic():
             self.create_roles()
             self.create_permissions()
@@ -23,173 +31,218 @@ class Command(BaseCommand):
             self.create_semesters()
             self.create_sample_majors()
             self.create_admin_user()
-        
-        self.stdout.write(self.style.SUCCESS('\n✓ تم إنشاء البيانات الأولية بنجاح!'))
 
+        self.stdout.write(
+            self.style.SUCCESS('\n✓ Initial data created successfully!')
+        )
+
+    # ------------------------------------------------------------------
+    # Roles
+    # ------------------------------------------------------------------
     def create_roles(self):
-        """إنشاء الأدوار الأساسية"""
+        """Create the three system roles: admin, instructor, student."""
         roles = [
-            {'role_name': 'admin', 'description': 'مسؤول النظام - صلاحيات كاملة'},
-            {'role_name': 'instructor', 'description': 'مدرس - إدارة المقررات والملفات'},
-            {'role_name': 'student', 'description': 'طالب - الوصول للمحتوى الأكاديمي'},
+            {
+                'code': 'admin',
+                'display_name': 'مسؤول النظام',
+                'description': 'مسؤول النظام - صلاحيات كاملة',
+                'is_system': True,
+            },
+            {
+                'code': 'instructor',
+                'display_name': 'مدرس',
+                'description': 'مدرس - إدارة المقررات والملفات',
+                'is_system': True,
+            },
+            {
+                'code': 'student',
+                'display_name': 'طالب',
+                'description': 'طالب - الوصول للمحتوى الأكاديمي',
+                'is_system': True,
+            },
         ]
-        
-        for role_data in roles:
+
+        for data in roles:
             role, created = Role.objects.get_or_create(
-                role_name=role_data['role_name'],
-                defaults={'description': role_data['description']}
+                code=data['code'],
+                defaults={
+                    'display_name': data['display_name'],
+                    'description': data['description'],
+                    'is_system': data['is_system'],
+                },
             )
-            status = 'تم إنشاؤه' if created else 'موجود مسبقاً'
-            self.stdout.write(f'  - الدور: {role.role_name} ({status})')
+            status = 'created' if created else 'exists'
+            self.stdout.write(f'  - Role: {role.code} ({status})')
 
+    # ------------------------------------------------------------------
+    # Permissions
+    # ------------------------------------------------------------------
     def create_permissions(self):
-        """إنشاء الصلاحيات"""
+        """Create all granular permissions grouped by category."""
         permissions = [
-            # صلاحيات المستخدمين
-            {'permission_name': 'manage_users', 'description': 'إدارة المستخدمين'},
-            {'permission_name': 'view_users', 'description': 'عرض المستخدمين'},
-            {'permission_name': 'promote_students', 'description': 'ترقية الطلاب'},
-            
-            # صلاحيات المقررات
-            {'permission_name': 'manage_courses', 'description': 'إدارة المقررات'},
-            {'permission_name': 'view_courses', 'description': 'عرض المقررات'},
-            {'permission_name': 'assign_instructors', 'description': 'تعيين المدرسين للمقررات'},
-            
-            # صلاحيات الملفات
-            {'permission_name': 'upload_files', 'description': 'رفع الملفات'},
-            {'permission_name': 'delete_files', 'description': 'حذف الملفات'},
-            {'permission_name': 'view_files', 'description': 'عرض الملفات'},
-            {'permission_name': 'download_files', 'description': 'تحميل الملفات'},
-            
-            # صلاحيات الذكاء الاصطناعي
-            {'permission_name': 'use_ai_features', 'description': 'استخدام ميزات الذكاء الاصطناعي'},
-            
-            # صلاحيات الإشعارات
-            {'permission_name': 'send_notifications', 'description': 'إرسال الإشعارات'},
-            
-            # صلاحيات النظام
-            {'permission_name': 'manage_semesters', 'description': 'إدارة الفصول الدراسية'},
-            {'permission_name': 'manage_majors', 'description': 'إدارة التخصصات'},
-            {'permission_name': 'view_statistics', 'description': 'عرض الإحصائيات'},
+            # Users
+            {'code': 'manage_users', 'display_name': 'إدارة المستخدمين',
+             'category': 'users', 'description': 'إدارة المستخدمين'},
+            {'code': 'view_users', 'display_name': 'عرض المستخدمين',
+             'category': 'users', 'description': 'عرض المستخدمين'},
+            {'code': 'promote_students', 'display_name': 'ترقية الطلاب',
+             'category': 'users', 'description': 'ترقية الطلاب'},
+            # Courses
+            {'code': 'manage_courses', 'display_name': 'إدارة المقررات',
+             'category': 'courses', 'description': 'إدارة المقررات'},
+            {'code': 'view_courses', 'display_name': 'عرض المقررات',
+             'category': 'courses', 'description': 'عرض المقررات'},
+            {'code': 'assign_instructors', 'display_name': 'تعيين المدرسين',
+             'category': 'courses', 'description': 'تعيين المدرسين للمقررات'},
+            # Files
+            {'code': 'upload_files', 'display_name': 'رفع الملفات',
+             'category': 'files', 'description': 'رفع الملفات'},
+            {'code': 'delete_files', 'display_name': 'حذف الملفات',
+             'category': 'files', 'description': 'حذف الملفات'},
+            {'code': 'view_files', 'display_name': 'عرض الملفات',
+             'category': 'files', 'description': 'عرض الملفات'},
+            {'code': 'download_files', 'display_name': 'تحميل الملفات',
+             'category': 'files', 'description': 'تحميل الملفات'},
+            # AI
+            {'code': 'use_ai_features', 'display_name': 'استخدام ميزات AI',
+             'category': 'ai', 'description': 'استخدام ميزات الذكاء الاصطناعي'},
+            # Notifications
+            {'code': 'send_notifications', 'display_name': 'إرسال الإشعارات',
+             'category': 'notifications', 'description': 'إرسال الإشعارات'},
+            # System
+            {'code': 'manage_semesters', 'display_name': 'إدارة الفصول',
+             'category': 'system', 'description': 'إدارة الفصول الدراسية'},
+            {'code': 'manage_majors', 'display_name': 'إدارة التخصصات',
+             'category': 'system', 'description': 'إدارة التخصصات'},
+            {'code': 'view_statistics', 'display_name': 'عرض الإحصائيات',
+             'category': 'system', 'description': 'عرض الإحصائيات'},
         ]
-        
-        for perm_data in permissions:
-            perm, created = Permission.objects.get_or_create(
-                permission_name=perm_data['permission_name'],
-                defaults={'description': perm_data['description']}
-            )
-        
-        self.stdout.write(f'  - تم إنشاء {len(permissions)} صلاحية')
 
+        for data in permissions:
+            Permission.objects.get_or_create(
+                code=data['code'],
+                defaults={
+                    'display_name': data['display_name'],
+                    'description': data['description'],
+                    'category': data['category'],
+                },
+            )
+
+        self.stdout.write(f'  - Created {len(permissions)} permissions')
+
+    # ------------------------------------------------------------------
+    # Role ↔ Permission bindings
+    # ------------------------------------------------------------------
     def create_role_permissions(self):
-        """ربط الصلاحيات بالأدوار"""
-        # صلاحيات الأدمن (جميع الصلاحيات)
-        admin_role = Role.objects.get(role_name='admin')
-        all_permissions = Permission.objects.all()
-        for perm in all_permissions:
-            RolePermission.objects.get_or_create(role=admin_role, permission=perm)
-        
-        # صلاحيات المدرس
-        instructor_role = Role.objects.get(role_name='instructor')
-        instructor_permissions = [
-            'view_courses', 'upload_files', 'delete_files', 'view_files',
-            'download_files', 'send_notifications', 'view_statistics'
-        ]
-        for perm_name in instructor_permissions:
-            perm = Permission.objects.get(permission_name=perm_name)
-            RolePermission.objects.get_or_create(role=instructor_role, permission=perm)
-        
-        # صلاحيات الطالب
-        student_role = Role.objects.get(role_name='student')
-        student_permissions = [
-            'view_courses', 'view_files', 'download_files', 'use_ai_features'
-        ]
-        for perm_name in student_permissions:
-            perm = Permission.objects.get(permission_name=perm_name)
-            RolePermission.objects.get_or_create(role=student_role, permission=perm)
-        
-        self.stdout.write('  - تم ربط الصلاحيات بالأدوار')
-
-    def create_levels(self):
-        """إنشاء المستويات الدراسية"""
-        levels = [
-            {'level_number': 1, 'level_name': 'المستوى الأول'},
-            {'level_number': 2, 'level_name': 'المستوى الثاني'},
-            {'level_number': 3, 'level_name': 'المستوى الثالث'},
-            {'level_number': 4, 'level_name': 'المستوى الرابع'},
-            {'level_number': 5, 'level_name': 'المستوى الخامس'},
-            {'level_number': 6, 'level_name': 'المستوى السادس'},
-            {'level_number': 7, 'level_name': 'المستوى السابع'},
-            {'level_number': 8, 'level_name': 'المستوى الثامن'},
-        ]
-        
-        for level_data in levels:
-            Level.objects.get_or_create(
-                level_number=level_data['level_number'],
-                defaults={'level_name': level_data['level_name']}
+        """Bind permissions to each role."""
+        # Admin gets everything
+        admin_role = Role.objects.get(code='admin')
+        for perm in Permission.objects.all():
+            RolePermission.objects.get_or_create(
+                role=admin_role, permission=perm,
             )
-        
-        self.stdout.write(f'  - تم إنشاء {len(levels)} مستوى دراسي')
 
+        # Instructor permissions
+        instructor_role = Role.objects.get(code='instructor')
+        for code in [
+            'view_courses', 'upload_files', 'delete_files',
+            'view_files', 'download_files', 'send_notifications',
+            'view_statistics',
+        ]:
+            perm = Permission.objects.get(code=code)
+            RolePermission.objects.get_or_create(
+                role=instructor_role, permission=perm,
+            )
+
+        # Student permissions
+        student_role = Role.objects.get(code='student')
+        for code in [
+            'view_courses', 'view_files', 'download_files',
+            'use_ai_features',
+        ]:
+            perm = Permission.objects.get(code=code)
+            RolePermission.objects.get_or_create(
+                role=student_role, permission=perm,
+            )
+
+        self.stdout.write('  - Role-permission bindings created')
+
+    # ------------------------------------------------------------------
+    # Levels
+    # ------------------------------------------------------------------
+    def create_levels(self):
+        """Create eight academic levels."""
+        names = [
+            'المستوى الأول', 'المستوى الثاني', 'المستوى الثالث',
+            'المستوى الرابع', 'المستوى الخامس', 'المستوى السادس',
+            'المستوى السابع', 'المستوى الثامن',
+        ]
+        for i, name in enumerate(names, start=1):
+            Level.objects.get_or_create(
+                level_number=i, defaults={'level_name': name},
+            )
+        self.stdout.write(f'  - Created {len(names)} academic levels')
+
+    # ------------------------------------------------------------------
+    # Semesters
+    # ------------------------------------------------------------------
     def create_semesters(self):
-        """إنشاء الفصول الدراسية"""
-        today = date.today()
-        year = today.year
-        
+        """Create two semesters for the current academic year."""
+        year = date.today().year
         semesters = [
             {
-                'name': f'الفصل الأول {year}/{year+1}',
-                'academic_year': f'{year}/{year+1}',
+                'name': f'الفصل الأول {year}/{year + 1}',
+                'academic_year': f'{year}/{year + 1}',
                 'semester_number': 1,
                 'start_date': date(year, 9, 1),
                 'end_date': date(year, 12, 31),
-                'is_current': True
+                'is_current': True,
             },
             {
-                'name': f'الفصل الثاني {year}/{year+1}',
-                'academic_year': f'{year}/{year+1}',
+                'name': f'الفصل الثاني {year}/{year + 1}',
+                'academic_year': f'{year}/{year + 1}',
                 'semester_number': 2,
-                'start_date': date(year+1, 1, 15),
-                'end_date': date(year+1, 5, 31),
-                'is_current': False
+                'start_date': date(year + 1, 1, 15),
+                'end_date': date(year + 1, 5, 31),
+                'is_current': False,
             },
         ]
-        
-        for sem_data in semesters:
+        for data in semesters:
             Semester.objects.get_or_create(
-                name=sem_data['name'],
+                name=data['name'],
                 defaults={
-                    'academic_year': sem_data['academic_year'],
-                    'semester_number': sem_data['semester_number'],
-                    'start_date': sem_data['start_date'],
-                    'end_date': sem_data['end_date'],
-                    'is_current': sem_data['is_current']
-                }
+                    'academic_year': data['academic_year'],
+                    'semester_number': data['semester_number'],
+                    'start_date': data['start_date'],
+                    'end_date': data['end_date'],
+                    'is_current': data['is_current'],
+                },
             )
-        
-        self.stdout.write(f'  - تم إنشاء {len(semesters)} فصل دراسي')
+        self.stdout.write(f'  - Created {len(semesters)} semesters')
 
+    # ------------------------------------------------------------------
+    # Sample Majors
+    # ------------------------------------------------------------------
     def create_sample_majors(self):
-        """إنشاء تخصصات نموذجية"""
+        """Create four sample academic majors."""
         majors = [
-            {'major_name': 'علوم الحاسب', 'description': 'قسم علوم الحاسب الآلي'},
-            {'major_name': 'نظم المعلومات', 'description': 'قسم نظم المعلومات'},
-            {'major_name': 'هندسة البرمجيات', 'description': 'قسم هندسة البرمجيات'},
-            {'major_name': 'الذكاء الاصطناعي', 'description': 'قسم الذكاء الاصطناعي'},
+            ('علوم الحاسب', 'قسم علوم الحاسب الآلي'),
+            ('نظم المعلومات', 'قسم نظم المعلومات'),
+            ('هندسة البرمجيات', 'قسم هندسة البرمجيات'),
+            ('الذكاء الاصطناعي', 'قسم الذكاء الاصطناعي'),
         ]
-        
-        for major_data in majors:
+        for name, desc in majors:
             Major.objects.get_or_create(
-                major_name=major_data['major_name'],
-                defaults={'description': major_data['description']}
+                major_name=name, defaults={'description': desc},
             )
-        
-        self.stdout.write(f'  - تم إنشاء {len(majors)} تخصص')
+        self.stdout.write(f'  - Created {len(majors)} majors')
 
+    # ------------------------------------------------------------------
+    # Admin User
+    # ------------------------------------------------------------------
     def create_admin_user(self):
-        """إنشاء حساب الأدمن الافتراضي"""
-        admin_role = Role.objects.get(role_name='admin')
-        
+        """Create the default admin super-user."""
+        admin_role = Role.objects.get(code='admin')
         admin_user, created = User.objects.get_or_create(
             academic_id='admin',
             defaults={
@@ -200,12 +253,13 @@ class Command(BaseCommand):
                 'id_card_number': '0000000000',
                 'is_staff': True,
                 'is_superuser': True,
-            }
+            },
         )
-        
         if created:
             admin_user.set_password('admin123')
             admin_user.save()
-            self.stdout.write('  - تم إنشاء حساب الأدمن (academic_id: admin, password: admin123)')
+            self.stdout.write(
+                '  - Admin created (academic_id: admin, password: admin123)'
+            )
         else:
-            self.stdout.write('  - حساب الأدمن موجود مسبقاً')
+            self.stdout.write('  - Admin already exists')

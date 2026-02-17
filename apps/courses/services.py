@@ -3,12 +3,15 @@
 S-ACM - Smart Academic Content Management System
 """
 
+import logging
 import os
 from pathlib import Path
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.utils.text import slugify
 from datetime import datetime
+
+logger = logging.getLogger('courses')
 
 
 class FileService:
@@ -88,7 +91,7 @@ class FileService:
                 default_storage.delete(file_path)
                 return True
         except Exception as e:
-            print(f"Error deleting file: {e}")
+            logger.error(f"Error deleting file: {e}")
         return False
     
     @classmethod
@@ -210,7 +213,7 @@ class PromotionService:
         
         # ترقية الطلاب
         students = User.objects.filter(
-            role__role_name='student',
+            role__code='student',
             level=from_level,
             account_status='active'
         )
@@ -231,7 +234,7 @@ class PromotionService:
         
         for level in levels:
             student_count = User.objects.filter(
-                role__role_name='student',
+                role__code='student',
                 level=level,
                 account_status='active'
             ).count()
@@ -253,14 +256,11 @@ class PromotionService:
 # ========== خدمات محسّنة (Service Layer Pattern) ==========
 # تم إضافة هذه الخدمات لتحسين المعمارية وفصل منطق الأعمال عن Views
 
-import logging
 from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass
 from django.db import transaction
 from django.db.models import QuerySet, Count, Sum
 from django.utils import timezone
-
-logger = logging.getLogger('courses')
 
 
 @dataclass
@@ -350,7 +350,7 @@ class EnhancedCourseService:
         
         # عدد الطلاب
         students_count = User.objects.filter(
-            role__role_name='Student',
+            role__code='student',
             major__in=course.course_majors.values_list('major', flat=True),
             level=course.level,
             account_status='active'
